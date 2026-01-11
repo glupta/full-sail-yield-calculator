@@ -388,7 +388,7 @@ export default function ScenarioPanel({
                                 paddingTop: 'var(--space-xs)'
                             }}
                         >
-                            <span>Final Value</span>
+                            <span>Final Return</span>
                             <span style={{ color: 'var(--color-primary)' }}>
                                 {formatUsd(scenario.depositAmount + results.netYield)}
                             </span>

@@ -134,7 +134,7 @@ export default function LPCalculator() {
                             </div>
                         </div>
                         <div className="stat-item text-center">
-                            <div className="stat-label">Final Value</div>
+                            <div className="stat-label">Final Return</div>
                             <div className="stat-value" style={{ color: 'var(--color-primary)' }}>
                                 {formatUsd(totals.totalDeposit + totals.totalNetYield)}
                             </div>
