@@ -9,6 +9,7 @@ const DEFAULT_SCENARIO = {
     depositAmount: 5000,
     priceRangeLow: null,  // Will be set based on pool's current price
     priceRangeHigh: null, // Will be set based on pool's current price
+    exitPrice: null,      // Target exit price for IL calculation
     timeline: 30,
     osailStrategy: 70,
 };

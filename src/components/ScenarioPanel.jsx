@@ -191,6 +191,30 @@ export default function ScenarioPanel({
                 </div>
             </div>
 
+            {/* Exit Price - for IL calculation */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Target Exit Price
+                    <span className="text-muted" style={{ float: 'right', fontSize: '0.7rem' }}>
+                        (for IL calc)
+                    </span>
+                </label>
+                <input
+                    type="number"
+                    step="0.01"
+                    value={scenario.exitPrice ?? ''}
+                    onChange={(e) => onChange({ exitPrice: e.target.value === '' ? null : Number(e.target.value) })}
+                    style={{ width: '100%' }}
+                    placeholder={pool?.currentPrice ? `Current: ${pool.currentPrice < 0.01 ? pool.currentPrice.toFixed(6) : pool.currentPrice.toFixed(4)}` : 'Exit price'}
+                />
+                {pool?.currentPrice && scenario.exitPrice > 0 && (
+                    <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                        {scenario.exitPrice > pool.currentPrice ? '+' : ''}
+                        {((scenario.exitPrice / pool.currentPrice - 1) * 100).toFixed(1)}% price change
+                    </div>
+                )}
+            </div>
+
             {/* Timeline */}
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>

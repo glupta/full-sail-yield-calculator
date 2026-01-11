@@ -3,7 +3,7 @@
  * Centralized calculation logic for scenario yields
  */
 
-import { estimateILFromVolatility, calculateILDollarValue } from './calculators/il-calculator';
+import { calculateIL, estimateILFromVolatility, calculateILDollarValue } from './calculators/il-calculator';
 import { projectEmissions, getEmissionValue } from './calculators/emission-projector';
 
 // Default parameters (TODO: make configurable)
@@ -12,7 +12,7 @@ const DEFAULT_VOLATILITY = 0.8;
 
 /**
  * Calculate results for a single scenario
- * @param {object} scenario - Scenario with pool, depositAmount, timeline, osailStrategy
+ * @param {object} scenario - Scenario with pool, depositAmount, timeline, osailStrategy, exitPrice
  * @returns {object|null} - Calculated results or null if no pool
  */
 export function calculateScenarioResults(scenario) {
@@ -35,9 +35,21 @@ export function calculateScenarioResults(scenario) {
     const lockPct = scenario.osailStrategy / 100;
     const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
 
-    // Estimate IL
-    const ilEstimate = estimateILFromVolatility(DEFAULT_VOLATILITY, scenario.timeline);
-    const ilDollar = calculateILDollarValue(scenario.depositAmount, ilEstimate.expected);
+    // Calculate IL - use exit price if provided, otherwise estimate from volatility
+    let ilPercent;
+    const currentPrice = pool.currentPrice;
+    const exitPrice = scenario.exitPrice;
+
+    if (currentPrice && exitPrice && exitPrice > 0) {
+        // Use actual price change for IL calculation
+        ilPercent = calculateIL(currentPrice, exitPrice);
+    } else {
+        // Fall back to volatility-based estimation
+        const ilEstimate = estimateILFromVolatility(DEFAULT_VOLATILITY, scenario.timeline);
+        ilPercent = ilEstimate.expected;
+    }
+
+    const ilDollar = calculateILDollarValue(scenario.depositAmount, ilPercent);
 
     // Net yield
     const netYield = strategyValue.totalValue - ilDollar;
@@ -47,7 +59,7 @@ export function calculateScenarioResults(scenario) {
         osailValue: strategyValue.totalValue,
         lockValue: strategyValue.lockValue,
         redeemValue: strategyValue.redeemValue,
-        ilPercent: ilEstimate.expected,
+        ilPercent,
         ilDollar,
         netYield,
         depositAmount: scenario.depositAmount,
