@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { STRATEGY_PRESETS } from '../lib/calculators/osail-strategy';
+import { roundToSigFigs } from '../lib/formatters';
 
 export default function ScenarioPanel({
     index,
@@ -169,7 +170,7 @@ export default function ScenarioPanel({
                 <input
                     type="number"
                     step="0.01"
-                    value={scenario.exitPrice ?? (pool?.currentPrice || '')}
+                    value={scenario.exitPrice ?? (pool?.currentPrice ? roundToSigFigs(pool.currentPrice) : '')}
                     onChange={(e) => onChange({ exitPrice: e.target.value === '' ? null : Number(e.target.value) })}
                     style={{ width: '100%' }}
                     placeholder="Exit price"

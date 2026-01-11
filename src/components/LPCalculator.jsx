@@ -3,6 +3,7 @@ import ScenarioPanel from './ScenarioPanel';
 import { loadInputs, saveInputs } from '../lib/persistence';
 import { fetchGaugePools } from '../lib/sdk';
 import { calculateTotalResults } from '../lib/scenario-calculator';
+import { roundToSigFigs } from '../lib/formatters';
 
 const DEFAULT_SCENARIO = {
     pool: null,           // Each scenario has its own pool
@@ -13,14 +14,6 @@ const DEFAULT_SCENARIO = {
     timeline: 30,
     osailStrategy: 70,
 };
-
-// Round to reasonable significant figures for clean display
-function roundToSigFigs(num, sigFigs = 4) {
-    if (num === 0) return 0;
-    const magnitude = Math.floor(Math.log10(Math.abs(num)));
-    const scale = Math.pow(10, sigFigs - 1 - magnitude);
-    return Math.round(num * scale) / scale;
-}
 
 export default function LPCalculator() {
     const [pools, setPools] = useState([]);
