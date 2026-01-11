@@ -341,7 +341,6 @@ export default function ScenarioPanel({
                             className="flex justify-between"
                             style={{
                                 fontWeight: 600,
-                                fontSize: '1.1rem',
                                 marginTop: 'var(--space-sm)',
                                 paddingTop: 'var(--space-sm)',
                                 borderTop: '1px solid var(--border-subtle)'
@@ -350,10 +349,23 @@ export default function ScenarioPanel({
                             <span>Net Yield</span>
                             <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
                                 {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
-                                <span style={{ marginLeft: '6px', fontSize: '0.85rem', opacity: 0.9 }}>
-                                    ({((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}% APR)
-                                </span>
                                 {isWinner && ' ✓'}
+                            </span>
+                        </div>
+
+                        {/* Final Value */}
+                        <div
+                            className="flex justify-between"
+                            style={{
+                                fontWeight: 600,
+                                fontSize: '1.1rem',
+                                marginTop: 'var(--space-xs)',
+                                paddingTop: 'var(--space-xs)'
+                            }}
+                        >
+                            <span>Final Value</span>
+                            <span className="text-primary-color">
+                                {formatUsd(scenario.depositAmount + results.netYield)}
                             </span>
                         </div>
                     </div>
