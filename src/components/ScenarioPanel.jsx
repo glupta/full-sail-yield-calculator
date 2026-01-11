@@ -186,6 +186,50 @@ export default function ScenarioPanel({
                 </div>
             </div>
 
+            {/* Timeline */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Timeline
+                </label>
+                <div className="flex gap-sm">
+                    {[
+                        { label: '1m', days: 30 },
+                        { label: '3m', days: 90 },
+                        { label: '6m', days: 180 },
+                        { label: '1y', days: 365 },
+                        { label: '2y', days: 730 },
+                        { label: '4y', days: 1460 },
+                    ].map(preset => (
+                        <button
+                            key={preset.label}
+                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => onChange({ timeline: preset.days })}
+                            style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
+                        >
+                            {preset.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Claim Strategy */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Claim Strategy
+                </label>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={scenario.osailStrategy}
+                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
+                />
+                <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
+                    <span>Redeem ({100 - scenario.osailStrategy}%)</span>
+                    <span>Lock ({scenario.osailStrategy}%)</span>
+                </div>
+            </div>
+
             {/* Price Range */}
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
@@ -314,49 +358,6 @@ export default function ScenarioPanel({
 
 
 
-            {/* Timeline */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    Timeline
-                </label>
-                <div className="flex gap-sm">
-                    {[
-                        { label: '1m', days: 30 },
-                        { label: '3m', days: 90 },
-                        { label: '6m', days: 180 },
-                        { label: '1y', days: 365 },
-                        { label: '2y', days: 730 },
-                        { label: '4y', days: 1460 },
-                    ].map(preset => (
-                        <button
-                            key={preset.label}
-                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => onChange({ timeline: preset.days })}
-                            style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
-                        >
-                            {preset.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* oSAIL Strategy */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    SAIL Strategy
-                </label>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={scenario.osailStrategy}
-                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
-                />
-                <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
-                    <span>Redeem ({100 - scenario.osailStrategy}%)</span>
-                    <span>Lock ({scenario.osailStrategy}%)</span>
-                </div>
-            </div>
 
             {/* Results */}
             {results && (
@@ -365,7 +366,29 @@ export default function ScenarioPanel({
                     paddingTop: 'var(--space-md)',
                     borderTop: '1px solid var(--border-subtle)'
                 }}>
-                    <h4 className="mb-md">Results</h4>
+                    {/* Visual Metrics Row */}
+                    <div className="flex gap-sm mb-md" style={{ justifyContent: 'space-around' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', marginBottom: '2px' }}>Est. APR</div>
+                            <div className="text-success" style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                {rangeAPR ? `${rangeAPR.estimatedAPR.toFixed(0)}%` : `${pool?.full_apr?.toFixed(0) || 0}%`}
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', marginBottom: '2px' }}>Leverage</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-primary)' }}>
+                                {rangeAPR ? `${rangeAPR.leverage.toFixed(1)}x` : '1.0x'}
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <div className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', marginBottom: '2px' }}>Net APR</div>
+                            <div className={results.netYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                                {((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(0)}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 className="mb-md">Yield Breakdown</h4>
                     <div style={{ fontSize: '0.9rem' }}>
                         {/* Column Headers */}
                         <div className="flex justify-between text-muted" style={{
