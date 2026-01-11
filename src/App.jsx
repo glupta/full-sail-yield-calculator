@@ -25,12 +25,6 @@ function App() {
             <div className="container">
                 <header className="flex justify-between items-center mb-md" style={{ paddingTop: 'var(--space-lg)' }}>
                     <h1>Full Sail Yield Calculator</h1>
-                    <input
-                        type="text"
-                        placeholder="0x... (optional address)"
-                        style={{ width: '280px' }}
-                        aria-label="Wallet address"
-                    />
                 </header>
 
                 <PersonaToggle persona={persona} onChange={setPersona} />

@@ -176,3 +176,39 @@ export async function fetchLocks(address) {
         return [];
     }
 }
+
+/**
+ * Fetch Full Sail protocol config (voting fees, global voting power, etc.)
+ * Uses the Full Sail backend API directly
+ * @returns {Promise<object|null>}
+ */
+export async function fetchConfig() {
+    try {
+        const res = await fetch('https://app.fullsail.finance/api/config');
+        if (!res.ok) {
+            console.error('Failed to fetch config:', res.status);
+            return null;
+        }
+        const data = await res.json();
+        return data.config;
+    } catch (e) {
+        console.error('Failed to fetch config:', e);
+        return null;
+    }
+}
+
+/**
+ * Fetch SAIL token price from the SAIL/USDC pool
+ * @returns {Promise<number>} SAIL price in USD
+ */
+export async function fetchSailPrice() {
+    try {
+        const pools = await fetchGaugePools();
+        const sailPool = pools.find(p => p.name === 'SAIL/USDC');
+        // token_b is SAIL in this pool
+        return sailPool?.token_b?.current_price || 0;
+    } catch (e) {
+        console.error('Failed to fetch SAIL price:', e);
+        return 0;
+    }
+}
