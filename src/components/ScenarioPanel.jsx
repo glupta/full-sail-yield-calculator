@@ -217,10 +217,11 @@ export default function ScenarioPanel({
                                         priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
                                     });
                                 }}
-                                style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem' }}
+                                style={{ flex: 1, padding: '6px 4px', fontSize: '0.65rem', lineHeight: 1.2 }}
                                 title={preset.description}
                             >
-                                {preset.label}
+                                <div style={{ fontWeight: 600 }}>{preset.label}</div>
+                                <div style={{ opacity: 0.7, fontSize: '0.55rem' }}>{preset.sublabel}</div>
                             </button>
                         ))}
                     </div>

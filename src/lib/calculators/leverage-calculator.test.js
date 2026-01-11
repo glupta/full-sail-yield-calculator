@@ -257,17 +257,24 @@ describe('RANGE_PRESETS', () => {
         });
     });
 
-    it('should include ±10% preset', () => {
-        const preset = RANGE_PRESETS.find(p => p.label === '±10%');
+    it('should include Narrow preset (±10%)', () => {
+        const preset = RANGE_PRESETS.find(p => p.label === 'Narrow');
         expect(preset).toBeDefined();
         expect(preset.lowerPct).toBe(-10);
         expect(preset.upperPct).toBe(10);
     });
 
-    it('should include ±1% preset', () => {
-        const preset = RANGE_PRESETS.find(p => p.label === '±1%');
+    it('should include Spot preset (±2%)', () => {
+        const preset = RANGE_PRESETS.find(p => p.label === 'Spot');
         expect(preset).toBeDefined();
-        expect(preset.lowerPct).toBe(-1);
-        expect(preset.upperPct).toBe(1);
+        expect(preset.lowerPct).toBe(-2);
+        expect(preset.upperPct).toBe(2);
+    });
+
+    it('should include Wide and Balanced presets', () => {
+        const wide = RANGE_PRESETS.find(p => p.label === 'Wide');
+        const balanced = RANGE_PRESETS.find(p => p.label === 'Balanced');
+        expect(wide).toBeDefined();
+        expect(balanced).toBeDefined();
     });
 });
