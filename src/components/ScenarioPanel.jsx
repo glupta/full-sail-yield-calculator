@@ -7,11 +7,15 @@ import { STRATEGY_PRESETS } from '../lib/calculators/osail-strategy';
 export default function ScenarioPanel({
     index,
     scenario,
-    pool,
+    pools,
+    poolsLoading,
     onChange,
     onRemove,
     isWinner
 }) {
+    // Use pool from scenario
+    const pool = scenario.pool;
+
     // Calculate yields based on scenario inputs and pool data
     const results = useMemo(() => {
         if (!pool) return null;
@@ -56,6 +60,13 @@ export default function ScenarioPanel({
     const formatUsd = (val) => `$${val.toFixed(2)}`;
     const formatOsail = (val) => `${val.toFixed(2)} oSAIL`;
 
+    const formatTVL = (tvl) => {
+        if (!tvl) return '$0';
+        if (tvl >= 1e6) return `$${(tvl / 1e6).toFixed(1)}M`;
+        if (tvl >= 1e3) return `$${(tvl / 1e3).toFixed(0)}K`;
+        return `$${tvl.toFixed(0)}`;
+    };
+
     return (
         <div
             className="glass-card"
@@ -84,6 +95,38 @@ export default function ScenarioPanel({
                         </button>
                     )}
                 </div>
+            </div>
+
+            {/* Pool Selection */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Pool
+                </label>
+                {poolsLoading ? (
+                    <div className="text-muted">Loading pools...</div>
+                ) : (
+                    <select
+                        value={pool?.id || ''}
+                        onChange={(e) => {
+                            const selected = pools.find(p => p.id === e.target.value);
+                            onChange({ pool: selected });
+                        }}
+                        style={{ width: '100%' }}
+                    >
+                        <option value="">Select a pool...</option>
+                        {pools.map(p => (
+                            <option key={p.id} value={p.id}>
+                                {p.token0_symbol}/{p.token1_symbol} ({formatTVL(p.dinamic_stats?.tvl)})
+                            </option>
+                        ))}
+                    </select>
+                )}
+                {pool && (
+                    <div className="flex gap-md mt-sm text-muted" style={{ fontSize: '0.75rem' }}>
+                        <span>APR: <span className="text-success">{pool.full_apr?.toFixed(1) || 0}%</span></span>
+                        <span>TVL: {formatTVL(pool.dinamic_stats?.tvl)}</span>
+                    </div>
+                )}
             </div>
 
             {/* Deposit Amount */}

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import PoolSelector from './PoolSelector';
 import ScenarioPanel from './ScenarioPanel';
 import { loadInputs, saveInputs } from '../lib/persistence';
+import { fetchGaugePools } from '../lib/sdk';
 
 const DEFAULT_SCENARIO = {
+    pool: null,           // Each scenario has its own pool
     depositAmount: 5000,
     priceRangeLow: null,  // Will be set based on pool's current price
     priceRangeHigh: null, // Will be set based on pool's current price
@@ -20,55 +21,78 @@ function roundToSigFigs(num, sigFigs = 4) {
 }
 
 export default function LPCalculator() {
-    const [selectedPool, setSelectedPool] = useState(null);
+    const [pools, setPools] = useState([]);
+    const [poolsLoading, setPoolsLoading] = useState(true);
     const [scenarios, setScenarios] = useState([{ ...DEFAULT_SCENARIO }]);
+
+    // Load pools once on mount
+    useEffect(() => {
+        async function loadPools() {
+            setPoolsLoading(true);
+            const fetchedPools = await fetchGaugePools();
+            setPools(fetchedPools);
+            setPoolsLoading(false);
+
+            // Auto-select first pool for first scenario if none selected
+            if (fetchedPools.length > 0) {
+                setScenarios(prev => {
+                    if (!prev[0].pool) {
+                        const pool = fetchedPools[0];
+                        return [{
+                            ...prev[0],
+                            pool,
+                            priceRangeLow: pool?.currentPrice ? roundToSigFigs(pool.currentPrice * 0.75) : null,
+                            priceRangeHigh: pool?.currentPrice ? roundToSigFigs(pool.currentPrice * 1.25) : null,
+                        }, ...prev.slice(1)];
+                    }
+                    return prev;
+                });
+            }
+        }
+        loadPools();
+    }, []);
 
     // Restore saved state
     useEffect(() => {
         const saved = loadInputs('lp_calculator');
-        if (saved) {
-            if (saved.selectedPool) setSelectedPool(saved.selectedPool);
-            if (saved.scenarios?.length) setScenarios(saved.scenarios);
+        if (saved?.scenarios?.length) {
+            setScenarios(saved.scenarios);
         }
     }, []);
 
     // Persist on change
     useEffect(() => {
-        saveInputs('lp_calculator', { selectedPool, scenarios });
-    }, [selectedPool, scenarios]);
-
-    // Handle pool selection - update price ranges to ±25% of current price
-    const handlePoolSelect = (pool) => {
-        setSelectedPool(pool);
-
-        if (pool?.currentPrice) {
-            const currentPrice = pool.currentPrice;
-            const lowPrice = roundToSigFigs(currentPrice * 0.75);   // -25%
-            const highPrice = roundToSigFigs(currentPrice * 1.25);  // +25%
-
-            // Update all scenarios to use new price range defaults
-            setScenarios(prev => prev.map(s => ({
-                ...s,
-                priceRangeLow: s.priceRangeLow === null ? lowPrice : s.priceRangeLow,
-                priceRangeHigh: s.priceRangeHigh === null ? highPrice : s.priceRangeHigh,
-            })));
-        }
-    };
+        saveInputs('lp_calculator', { scenarios });
+    }, [scenarios]);
 
     const updateScenario = (index, updates) => {
-        setScenarios(prev => prev.map((s, i) =>
-            i === index ? { ...s, ...updates } : s
-        ));
+        setScenarios(prev => prev.map((s, i) => {
+            if (i !== index) return s;
+
+            const updated = { ...s, ...updates };
+
+            // If pool changed, set default price ranges
+            if (updates.pool && updates.pool !== s.pool) {
+                const pool = updates.pool;
+                if (pool?.currentPrice) {
+                    updated.priceRangeLow = roundToSigFigs(pool.currentPrice * 0.75);
+                    updated.priceRangeHigh = roundToSigFigs(pool.currentPrice * 1.25);
+                }
+            }
+
+            return updated;
+        }));
     };
 
     const addScenario = () => {
         if (scenarios.length < 3) {
-            // New scenarios get ±25% of current price
-            const currentPrice = selectedPool?.currentPrice;
+            // Copy pool from first scenario if available
+            const firstPool = scenarios[0]?.pool;
             const newScenario = {
                 ...DEFAULT_SCENARIO,
-                priceRangeLow: currentPrice ? roundToSigFigs(currentPrice * 0.75) : null,
-                priceRangeHigh: currentPrice ? roundToSigFigs(currentPrice * 1.25) : null,
+                pool: firstPool,
+                priceRangeLow: firstPool?.currentPrice ? roundToSigFigs(firstPool.currentPrice * 0.75) : null,
+                priceRangeHigh: firstPool?.currentPrice ? roundToSigFigs(firstPool.currentPrice * 1.25) : null,
             };
             setScenarios([...scenarios, newScenario]);
         }
@@ -82,40 +106,28 @@ export default function LPCalculator() {
 
     return (
         <div>
-            <div className="grid-2" style={{ gridTemplateColumns: '300px 1fr' }}>
-                {/* Left sidebar */}
-                <div className="flex flex-col gap-lg">
-                    <PoolSelector
-                        selectedPool={selectedPool}
-                        onSelect={handlePoolSelect}
+            <div className="flex justify-between items-center mb-md">
+                <h3>Scenarios</h3>
+                {scenarios.length < 3 && (
+                    <button className="btn btn-secondary" onClick={addScenario}>
+                        + Add Scenario
+                    </button>
+                )}
+            </div>
+
+            <div className={`grid-${scenarios.length}`}>
+                {scenarios.map((scenario, index) => (
+                    <ScenarioPanel
+                        key={index}
+                        index={index}
+                        scenario={scenario}
+                        pools={pools}
+                        poolsLoading={poolsLoading}
+                        onChange={(updates) => updateScenario(index, updates)}
+                        onRemove={scenarios.length > 1 ? () => removeScenario(index) : null}
+                        isWinner={false} // TODO: Calculate winner
                     />
-                </div>
-
-                {/* Main content - scenarios */}
-                <div>
-                    <div className="flex justify-between items-center mb-md">
-                        <h3>Scenarios</h3>
-                        {scenarios.length < 3 && (
-                            <button className="btn btn-secondary" onClick={addScenario}>
-                                + Add Scenario
-                            </button>
-                        )}
-                    </div>
-
-                    <div className={`grid-${scenarios.length}`}>
-                        {scenarios.map((scenario, index) => (
-                            <ScenarioPanel
-                                key={index}
-                                index={index}
-                                scenario={scenario}
-                                pool={selectedPool}
-                                onChange={(updates) => updateScenario(index, updates)}
-                                onRemove={scenarios.length > 1 ? () => removeScenario(index) : null}
-                                isWinner={false} // TODO: Calculate winner
-                            />
-                        ))}
-                    </div>
-                </div>
+                ))}
             </div>
         </div>
     );
