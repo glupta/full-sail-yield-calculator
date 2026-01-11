@@ -70,7 +70,6 @@ export async function fetchTokenPrices() {
         priceCache = prices;
         lastFetch = now;
 
-        console.log('[Prices] Fetched from CoinGecko:', prices);
         return prices;
 
     } catch (e) {

@@ -97,11 +97,6 @@ export function calculateScenarioResults(scenario) {
     // Leverage multiplier: how much more/less concentrated than baseline
     const leverageMultiplier = userLeverage / BASELINE_LEVERAGE;
 
-    // DEBUG: Log leverage values (remove in production)
-    if (typeof window !== 'undefined') {
-        console.log('[IL Debug]', { currentPrice, priceLow, priceHigh, userLeverage, exitPrice });
-    }
-
     // Calculate time in range (assuming linear price change from current to exit)
     // Once price exits range, position stops earning
     let timeInRangeFraction = 1; // Default: always in range
