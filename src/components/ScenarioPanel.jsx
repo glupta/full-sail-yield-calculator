@@ -283,11 +283,11 @@ export default function ScenarioPanel({
                                 borderLeft: '2px solid var(--border-subtle)',
                                 marginBottom: 'var(--space-xs)'
                             }}>
-                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
+                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Redeemed (liquid)</span>
                                     <span className="text-success">{formatUsd(results.redeemValue)} ({results.redeemAPR?.toFixed(1) || '0.0'}%)</span>
                                 </div>
-                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
+                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Locked (veSAIL)</span>
                                     <span className="text-success">{formatUsd(results.lockValue)} ({results.lockAPR?.toFixed(1) || '0.0'}%)</span>
                                 </div>
@@ -320,7 +320,7 @@ export default function ScenarioPanel({
                                         marginBottom: 'var(--space-xs)'
                                     }}>
                                         {results.externalRewards.map((reward, idx) => (
-                                            <div key={idx} className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
+                                            <div key={idx} className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                                 <span>→ {reward.token}</span>
                                                 <span className="text-success">{formatUsd(reward.projectedValue)} ({reward.apr.toFixed(1)}%)</span>
                                             </div>
