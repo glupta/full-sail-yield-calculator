@@ -115,6 +115,7 @@ export default function LPCalculator() {
             {/* Portfolio Summary - at top */}
             {totals.scenarioCount > 0 && (
                 <div className="glass-card mb-lg">
+                    <h4 className="mb-md">Summary</h4>
                     <div className="flex justify-around items-center" style={{ gap: 'var(--space-lg)' }}>
                         <div className="text-center">
                             <div className="text-muted" style={{ fontSize: '0.75rem' }}>Total Deposit</div>
