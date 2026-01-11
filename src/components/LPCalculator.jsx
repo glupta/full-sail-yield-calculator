@@ -114,25 +114,25 @@ export default function LPCalculator() {
         <div>
             {/* Portfolio Summary - at top */}
             {totals.scenarioCount > 0 && (
-                <div className="glass-card mb-lg">
-                    <h4 className="mb-md">Summary</h4>
+                <div className="summary-card mb-lg">
+                    <h4 className="mb-md" style={{ color: 'var(--color-primary)', fontSize: '0.9rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Summary</h4>
                     <div className="flex justify-around items-center" style={{ gap: 'var(--space-lg)' }}>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Total Deposit</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatUsd(totals.totalDeposit)}</div>
+                        <div className="stat-item text-center">
+                            <div className="stat-label">Total Deposit</div>
+                            <div className="stat-value">{formatUsd(totals.totalDeposit)}</div>
                         </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Projected SAIL</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.totalOsail.toFixed(2)}</div>
+                        <div className="stat-item text-center">
+                            <div className="stat-label">Projected SAIL</div>
+                            <div className="stat-value">{totals.totalOsail.toFixed(2)}</div>
                         </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Est. IL</div>
-                            <div className="text-error" style={{ fontSize: '1.25rem', fontWeight: 600 }}>-{formatUsd(totals.totalIL)}</div>
+                        <div className="stat-item text-center">
+                            <div className="stat-label">Est. IL</div>
+                            <div className="stat-value text-error">-{formatUsd(totals.totalIL)}</div>
                         </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Net Yield</div>
-                            <div className={totals.totalNetYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                                {totals.totalNetYield >= 0 ? '' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
+                        <div className="stat-item text-center">
+                            <div className="stat-label">Net Yield</div>
+                            <div className={`stat-value ${totals.totalNetYield >= 0 ? 'text-success' : 'text-error'}`}>
+                                {totals.totalNetYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
                             </div>
                         </div>
                     </div>
