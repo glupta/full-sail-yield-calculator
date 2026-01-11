@@ -490,7 +490,7 @@ describe('calculateScenarioResults - Range-based IL amplification', () => {
         expect(narrowResult.ilDollar).toBeGreaterThan(fullResult.ilDollar);
     });
 
-    it('should cap IL at boundary when price exits range', () => {
+    it('should have worse IL as price moves further past range boundary', () => {
         // Narrow range: ±5%
         const scenario = {
             pool: basePool,
@@ -499,23 +499,24 @@ describe('calculateScenarioResults - Range-based IL amplification', () => {
             osailStrategy: 50,
             priceRangeLow: 0.95,  // -5%
             priceRangeHigh: 1.05, // +5%
-            exitPrice: 1.20, // 20% increase, WAY beyond range
+            exitPrice: 1.20, // 20% increase, beyond range
         };
         const result = calculateScenarioResults(scenario);
 
-        // IL should be calculated at boundary (1.05), not at exit price (1.20)
-        // This means IL is the same whether exit is 1.10 or 1.50 if range ends at 1.05
+        // Even further beyond range
         const scenarioMoreExtreme = {
             ...scenario,
-            exitPrice: 1.50, // Even further beyond range
+            exitPrice: 1.50, // 50% increase, way beyond range
         };
         const resultExtreme = calculateScenarioResults(scenarioMoreExtreme);
 
         console.log('Exit at 1.20 IL:', result.ilDollar);
         console.log('Exit at 1.50 IL:', resultExtreme.ilDollar);
 
-        // IL should be the same (capped at boundary)
-        expect(result.ilDollar).toBeCloseTo(resultExtreme.ilDollar, 0);
+        // IL continues to worsen as price moves further past range
+        // This is because HODL value keeps increasing, while LP position
+        // is now 100% token1 and tracks linearly with price
+        expect(resultExtreme.ilDollar).toBeGreaterThan(result.ilDollar);
     });
 
     it('should have 0 IL when exit price equals current price regardless of range', () => {

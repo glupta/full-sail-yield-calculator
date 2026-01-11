@@ -3,7 +3,7 @@
  * Centralized calculation logic for scenario yields
  */
 
-import { calculateIL, estimateILFromVolatility, calculateILDollarValue } from './calculators/il-calculator';
+import { calculateIL, calculateConcentratedIL, estimateILFromVolatility, calculateILDollarValue } from './calculators/il-calculator';
 import { projectEmissions, getEmissionValue, calculateEmissionAPR } from './calculators/emission-projector';
 import { calculateLeverage } from './calculators/leverage-calculator';
 
@@ -154,33 +154,18 @@ export function calculateScenarioResults(scenario) {
         scenario.timeline
     );
 
-    // Calculate IL - affected by price range concentration
-    // For concentrated liquidity, IL is amplified by leverage
+    // Calculate IL using concentrated liquidity math
+    // For concentrated positions, IL is calculated using actual position value formulas
     let ilPercent;
 
     if (currentPrice && exitPrice && exitPrice > 0) {
-        // Base IL from price change
-        const baseIL = calculateIL(currentPrice, exitPrice);
-
-        // For concentrated liquidity, IL is amplified
-        // Narrower range = higher leverage = higher IL
-        // If price exits range: position becomes 100% one asset, IL is capped at boundary
         if (priceLow && priceHigh && priceLow < priceHigh) {
-            const priceExitsRange = exitPrice < priceLow || exitPrice > priceHigh;
-
-            if (priceExitsRange) {
-                // Price exited range - calculate IL at the boundary where position became 100% one token
-                const boundaryPrice = exitPrice < priceLow ? priceLow : priceHigh;
-                const ilToExit = calculateIL(currentPrice, boundaryPrice);
-                // IL is amplified by leverage at the boundary
-                ilPercent = ilToExit * userLeverage;
-            } else {
-                // Price stayed in range - IL amplified proportionally to leverage
-                ilPercent = baseIL * userLeverage;
-            }
+            // Use accurate concentrated liquidity IL formula
+            // This calculates actual LP value vs HODL value based on Uniswap v3 math
+            ilPercent = calculateConcentratedIL(currentPrice, exitPrice, priceLow, priceHigh);
         } else {
-            // No range set, use base IL
-            ilPercent = baseIL;
+            // No range set, use standard full-range IL formula
+            ilPercent = calculateIL(currentPrice, exitPrice);
         }
     } else {
         // Fall back to volatility-based estimation only if no price data
