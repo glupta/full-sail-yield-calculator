@@ -229,7 +229,7 @@ export default function ScenarioPanel({
                 {pool?.currentPrice && (() => {
                     const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
                     return (
-                        <div className="flex gap-sm mb-sm">
+                        <div className="flex gap-sm" style={{ marginBottom: 'var(--space-xs)' }}>
                             {presets.map(preset => (
                                 <button
                                     key={preset.label}
