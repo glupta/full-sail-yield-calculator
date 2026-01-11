@@ -17,7 +17,9 @@ export default function ScenarioPanel({
         if (!pool) return null;
 
         const tvl = pool.dinamic_stats?.tvl || 0;
-        const osail24h = pool.distributed_osail_24h || 0;
+        // SDK returns distributed_osail_24h in raw units (9 decimals for SUI tokens)
+        const osail24hRaw = pool.distributed_osail_24h || 0;
+        const osail24h = osail24hRaw / 1e9; // Convert to human-readable
         const sailPrice = 0.5; // TODO: Fetch from SDK
         const volatility = 0.8; // Default 80% annualized
 
@@ -104,24 +106,43 @@ export default function ScenarioPanel({
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
                     Price Range
+                    {pool?.currentPrice && (
+                        <span style={{ float: 'right', color: 'var(--color-primary)' }}>
+                            Current: ${pool.currentPrice.toFixed(4)}
+                        </span>
+                    )}
                 </label>
                 <div className="flex gap-sm">
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={scenario.priceRangeLow}
-                        onChange={(e) => onChange({ priceRangeLow: Number(e.target.value) })}
-                        style={{ width: '50%' }}
-                        placeholder="Low"
-                    />
-                    <input
-                        type="number"
-                        step="0.01"
-                        value={scenario.priceRangeHigh}
-                        onChange={(e) => onChange({ priceRangeHigh: Number(e.target.value) })}
-                        style={{ width: '50%' }}
-                        placeholder="High"
-                    />
+                    <div style={{ width: '50%' }}>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={scenario.priceRangeLow}
+                            onChange={(e) => onChange({ priceRangeLow: Number(e.target.value) })}
+                            style={{ width: '100%' }}
+                            placeholder="Low"
+                        />
+                        {pool?.currentPrice && scenario.priceRangeLow > 0 && (
+                            <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                                {((scenario.priceRangeLow / pool.currentPrice - 1) * 100).toFixed(1)}% from current
+                            </div>
+                        )}
+                    </div>
+                    <div style={{ width: '50%' }}>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={scenario.priceRangeHigh}
+                            onChange={(e) => onChange({ priceRangeHigh: Number(e.target.value) })}
+                            style={{ width: '100%' }}
+                            placeholder="High"
+                        />
+                        {pool?.currentPrice && scenario.priceRangeHigh > 0 && (
+                            <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                                +{((scenario.priceRangeHigh / pool.currentPrice - 1) * 100).toFixed(1)}% from current
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -129,16 +150,36 @@ export default function ScenarioPanel({
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
                     Timeline
+                    <span style={{ float: 'right', color: 'var(--text-primary)' }}>
+                        {scenario.timeline >= 365
+                            ? `${(scenario.timeline / 365).toFixed(1)}y`
+                            : `${scenario.timeline}d`}
+                    </span>
                 </label>
-                <div className="flex gap-sm">
-                    {[30, 60, 90].map(days => (
+                <input
+                    type="range"
+                    min="30"
+                    max="1460"
+                    step="1"
+                    value={scenario.timeline}
+                    onChange={(e) => onChange({ timeline: Number(e.target.value) })}
+                />
+                <div className="flex gap-sm mt-sm">
+                    {[
+                        { label: '30d', days: 30 },
+                        { label: '90d', days: 90 },
+                        { label: '180d', days: 180 },
+                        { label: '1y', days: 365 },
+                        { label: '2y', days: 730 },
+                        { label: '4y', days: 1460 },
+                    ].map(preset => (
                         <button
-                            key={days}
-                            className={`btn ${scenario.timeline === days ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => onChange({ timeline: days })}
-                            style={{ flex: 1, padding: 'var(--space-xs) var(--space-sm)' }}
+                            key={preset.label}
+                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => onChange({ timeline: preset.days })}
+                            style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
                         >
-                            {days} Days
+                            {preset.label}
                         </button>
                     ))}
                 </div>

@@ -85,16 +85,32 @@ export async function fetchGaugePools() {
         // Fetch all pools in parallel
         const poolPromises = FULLSAIL_POOL_IDS.map(async ({ id, name }) => {
             try {
+                // Fetch backend data (APR, TVL, etc.)
                 const pool = await sdk.Pool.getById(id);
+
+                // Also fetch chain data for current price
+                let currentPrice = null;
+                try {
+                    const chainPool = await sdk.Pool.getByIdFromChain(id);
+                    if (chainPool?.currentSqrtPrice) {
+                        // Convert sqrtPrice to actual price
+                        // sqrtPrice is in Q64.64 format, need to square and adjust decimals
+                        const sqrtPrice = Number(chainPool.currentSqrtPrice) / (2 ** 64);
+                        currentPrice = sqrtPrice * sqrtPrice;
+                    }
+                } catch (e) {
+                    console.warn(`Failed to fetch chain price for ${name}`);
+                }
+
                 if (pool) {
-                    // Normalize pool data
                     return {
                         ...pool,
                         id,
                         name: pool.name || name,
                         token0_symbol: name.split('/')[0],
                         token1_symbol: name.split('/')[1],
-                        gauge_id: pool.gauge_id || true, // All in this list have gauges
+                        gauge_id: pool.gauge_id || true,
+                        currentPrice,
                     };
                 }
                 return null;
