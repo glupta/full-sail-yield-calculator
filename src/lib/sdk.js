@@ -212,3 +212,118 @@ export async function fetchSailPrice() {
         return 0;
     }
 }
+
+/**
+ * Calculate estimated APR using the SDK's liquidity-based formula
+ * This matches the calculation used by the Full Sail webapp
+ * 
+ * @param {object} params - Calculation parameters
+ * @param {object} params.pool - Pool data from SDK (must include dinamic_stats, token_a, token_b, etc.)
+ * @param {number} params.priceLow - Lower price bound
+ * @param {number} params.priceHigh - Upper price bound
+ * @param {number} params.depositAmount - Deposit amount in USD
+ * @param {string} params.rewardChoice - 'vesail' or 'liquid' (default: 'liquid')
+ * @param {number} params.sailPrice - SAIL token price in USD
+ * @returns {Promise<number>} Estimated APR as percentage (e.g., 9.8 means 9.8%)
+ */
+export async function calculateEstimatedAPRFromSDK({
+    pool,
+    priceLow,
+    priceHigh,
+    depositAmount,
+    rewardChoice = 'liquid',
+    sailPrice
+}) {
+    try {
+        const { ClmmPoolUtil, TickMath, PositionUtils } = await import('@fullsailfinance/sdk');
+
+        if (!pool || !priceLow || !priceHigh || !depositAmount) {
+            console.warn('Missing required parameters for SDK APR calculation');
+            return 0;
+        }
+
+        // Get token decimals from pool
+        const decimalsA = pool.token_a?.decimals ?? 9;
+        const decimalsB = pool.token_b?.decimals ?? 9;
+        const tickSpacing = pool.tick_spacing || 60;
+
+        // Get current sqrt price from pool
+        const currentSqrtPrice = BigInt(pool.current_sqrt_price || 0);
+        if (currentSqrtPrice === 0n) {
+            console.warn('Pool has no current_sqrt_price');
+            return 0;
+        }
+
+        // Convert prices to initializable ticks
+        // Note: Full Sail uses Decimal from the SDK, we need to import or approximate
+        const { Decimal } = await import('@fullsailfinance/sdk');
+
+        const lowerTick = TickMath.priceToInitializableTickIndex(
+            Decimal(priceLow), decimalsA, decimalsB, tickSpacing
+        );
+        const upperTick = TickMath.priceToInitializableTickIndex(
+            Decimal(priceHigh), decimalsA, decimalsB, tickSpacing
+        );
+
+        // Check if current price is within range
+        const currentTick = TickMath.sqrtPriceX64ToTickIndex(currentSqrtPrice);
+        if (currentTick < lowerTick || currentTick > upperTick) {
+            // Position is out of range - APR is 0
+            return 0;
+        }
+
+        // Estimate how much of token A we'd deposit based on USD amount
+        // Approximate: half the deposit goes to each token
+        const tokenAPrice = pool.token_a?.current_price || 1;
+        const coinAmountA = BigInt(Math.floor((depositAmount / 2 / tokenAPrice) * Math.pow(10, decimalsA)));
+
+        // Estimate liquidity and coin amounts for the position
+        const { amountA, amountB, liquidityAmount } = ClmmPoolUtil.estLiquidityAndCoinAmountFromOneAmounts(
+            lowerTick,
+            upperTick,
+            coinAmountA,
+            true, // isCoinA
+            false, // roundUp
+            0, // slippage
+            currentSqrtPrice
+        );
+
+        // Debug logging for APR calculation
+        console.log('[SDK APR Debug]', {
+            poolName: pool?.name,
+            priceLow,
+            priceHigh,
+            depositAmount,
+            lowerTick,
+            upperTick,
+            currentTick,
+            coinAmountA: coinAmountA.toString(),
+            liquidityAmount: liquidityAmount?.toString(),
+            amountA: amountA?.toString(),
+            amountB: amountB?.toString(),
+            sailPrice,
+            rewardChoice,
+            poolActiveLiquidity: pool?.dinamic_stats?.active_liquidity,
+            distributedOsail24h: pool?.distributed_osail_24h,
+        });
+
+        // Use PositionUtils.estimateAprByLiquidity (same as webapp)
+        const estimatedApr = PositionUtils.estimateAprByLiquidity({
+            pool,
+            positionActiveLiquidity: liquidityAmount,
+            positionAmountA: amountA,
+            positionAmountB: amountB,
+            sailPrice: sailPrice || 0.01, // fallback sail price
+            oSailDecimals: 6, // SAIL uses 6 decimals
+            rewardChoice: rewardChoice === 'vesail' ? 'vesail' : undefined,
+            isNewPosition: true, // Calculate as if adding new position
+        });
+
+        console.log('[SDK APR Debug] Result:', estimatedApr);
+
+        return estimatedApr;
+    } catch (e) {
+        console.error('Failed to calculate SDK-based APR:', e);
+        return 0;
+    }
+}

@@ -77,7 +77,7 @@ function App() {
                         />
                         by{' '}
                         <a
-                            href="https://twitter.com/akshay"
+                            href="https://x.com/therealglupta"
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -91,7 +91,7 @@ function App() {
                             onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
                             onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
                         >
-                            akshay
+                            glupta
                             <ExternalLink size={10} />
                         </a>
                         {' '}& Claude

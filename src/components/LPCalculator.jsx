@@ -178,15 +178,8 @@ export default function LPCalculator() {
                         Summary
                     </h4>
 
-                    {/* Stats Row - Always inline 6 columns */}
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(6, 1fr)',
-                            gap: 'var(--space-sm)',
-                            alignItems: 'start'
-                        }}
-                    >
+                    {/* Stats Row - Crisp Grid Layout */}
+                    <div className="summary-stats-grid">
                         <div className="stat-item text-center">
                             <div className="stat-label">Total Deposit</div>
                             <div className="stat-value">{formatUsd(totals.totalDeposit)}</div>
@@ -218,15 +211,8 @@ export default function LPCalculator() {
                             <div className="stat-apr">{totals.avgNetAPR?.toFixed(1) || '0.0'}% APR</div>
                         </div>
 
-                        <div
-                            className="stat-item text-center"
-                            style={{
-                                background: 'rgba(0, 160, 255, 0.1)',
-                                borderRadius: 'var(--radius-md)',
-                                padding: 'var(--space-xs) var(--space-sm)',
-                                border: '1px solid rgba(0, 160, 255, 0.2)'
-                            }}
-                        >
+
+                        <div className="stat-item text-center">
                             <div className="stat-label">Final Return</div>
                             <div className="stat-value" style={{ color: 'var(--color-primary)' }}>
                                 {formatUsd(totals.totalDeposit + totals.totalNetYield)}

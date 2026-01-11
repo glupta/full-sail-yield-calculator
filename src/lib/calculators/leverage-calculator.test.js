@@ -65,14 +65,14 @@ describe('calculateLeverage', () => {
     });
 
     describe('out of range positions', () => {
-        it('should calculate leverage when currentPrice <= priceLow', () => {
+        it('should return 1 when currentPrice <= priceLow (out of range)', () => {
             const leverage = calculateLeverage(0.5, 0.9, 1.1);
-            expect(leverage).toBeGreaterThan(0);
+            expect(leverage).toBe(1);
         });
 
-        it('should calculate leverage when currentPrice >= priceHigh', () => {
+        it('should return 1 when currentPrice >= priceHigh (out of range)', () => {
             const leverage = calculateLeverage(1.5, 0.9, 1.1);
-            expect(leverage).toBeGreaterThan(0);
+            expect(leverage).toBe(1);
         });
     });
 
@@ -91,16 +91,16 @@ describe('calculateLeverage', () => {
             expect(veryNarrowLeverage).toBeGreaterThan(narrowLeverage);
         });
 
-        it('should calculate ±10% range leverage around 10x', () => {
+        it('should calculate ±10% range leverage around 20x (Full Sail formula)', () => {
             const leverage = calculateLeverage(1, 0.9, 1.1);
-            // ±10% range gives approximately 10x leverage
-            expect(leverage).toBeCloseTo(10, 0);
+            // ±10% range: L = 1/(1-sqrt(0.9)) ≈ 19.5x
+            expect(leverage).toBeCloseTo(20, 0);
         });
 
-        it('should calculate ±1% range leverage around 100x', () => {
+        it('should calculate ±1% range leverage around 200x (Full Sail formula)', () => {
             const leverage = calculateLeverage(1, 0.99, 1.01);
-            // ±1% range gives approximately 100x leverage
-            expect(leverage).toBeCloseTo(100, 0);
+            // ±1% range: L = 1/(1-sqrt(0.99)) ≈ 199x
+            expect(leverage).toBeCloseTo(200, 0);
         });
 
         it('should return minimum of 1 for very wide ranges', () => {
@@ -157,12 +157,12 @@ describe('deriveBaseAPR', () => {
         expect(deriveBaseAPR(-50)).toBe(0);
     });
 
-    it('should divide poolAPR by baseline leverage (20)', () => {
-        expect(deriveBaseAPR(100)).toBe(5); // 100 / 20 = 5
+    it('should divide poolAPR by baseline leverage (17.5)', () => {
+        expect(deriveBaseAPR(100)).toBeCloseTo(5.714, 2); // 100 / 17.5 ≈ 5.714
     });
 
     it('should handle decimal poolAPR values', () => {
-        expect(deriveBaseAPR(50)).toBe(2.5); // 50 / 20 = 2.5
+        expect(deriveBaseAPR(50)).toBeCloseTo(2.857, 2); // 50 / 17.5 ≈ 2.857
     });
 });
 
@@ -184,7 +184,7 @@ describe('calculateRangeAPR', () => {
 
     it('should derive baseAPR from poolAPR', () => {
         const result = calculateRangeAPR(100, 1, 0.9, 1.1);
-        expect(result.baseAPR).toBe(5); // 100 / 20
+        expect(result.baseAPR).toBeCloseTo(5.714, 2); // 100 / 17.5 ≈ 5.714
     });
 
     it('should calculate estimatedAPR as baseAPR * leverage', () => {

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { X, CheckCircle, ChevronDown } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
-import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent } from '../lib/calculators/leverage-calculator';
+import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
+import { calculateEstimatedAPRFromSDK, fetchSailPrice } from '../lib/sdk';
 
 export default function ScenarioPanel({
     index,
@@ -15,6 +16,8 @@ export default function ScenarioPanel({
 }) {
     const [isSailExpanded, setIsSailExpanded] = useState(false);
     const [isExternalExpanded, setIsExternalExpanded] = useState(false);
+    const [sdkAPR, setSdkAPR] = useState(null);
+    const [sailPrice, setSailPrice] = useState(0.01);
 
     const pool = scenario.pool;
 
@@ -29,6 +32,39 @@ export default function ScenarioPanel({
         if (!priceLow || !priceHigh) return null;
         return calculateRangeAPR(pool.full_apr, pool.currentPrice, priceLow, priceHigh);
     }, [pool?.full_apr, pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
+
+    // Calculate leverage for display
+    const leverage = useMemo(() => {
+        if (!pool?.currentPrice || !scenario.priceRangeLow || !scenario.priceRangeHigh) return 1;
+        return calculateLeverage(pool.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh);
+    }, [pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
+
+    // Fetch SAIL price on mount
+    useEffect(() => {
+        fetchSailPrice().then(price => {
+            if (price > 0) setSailPrice(price);
+        });
+    }, []);
+
+    // Calculate SDK-based APR when price range changes
+    useEffect(() => {
+        if (!pool || !scenario.priceRangeLow || !scenario.priceRangeHigh || !scenario.depositAmount) {
+            setSdkAPR(null);
+            return;
+        }
+
+        calculateEstimatedAPRFromSDK({
+            pool,
+            priceLow: scenario.priceRangeLow,
+            priceHigh: scenario.priceRangeHigh,
+            depositAmount: scenario.depositAmount,
+            rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
+            sailPrice,
+        }).then(apr => {
+            setSdkAPR(apr);
+        });
+    }, [pool, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
+
 
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -422,13 +458,17 @@ export default function ScenarioPanel({
                         <div style={{ textAlign: 'center' }}>
                             <div className="text-muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.5px' }}>Est. APR</div>
                             <div className="text-success" style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                                {rangeAPR ? `${rangeAPR.estimatedAPR.toFixed(0)}%` : `${pool?.full_apr?.toFixed(0) || 0}%`}
+                                {sdkAPR !== null
+                                    ? `${sdkAPR.toFixed(1)}%`
+                                    : rangeAPR
+                                        ? `${rangeAPR.estimatedAPR.toFixed(0)}%`
+                                        : `${pool?.full_apr?.toFixed(0) || 0}%`}
                             </div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
                             <div className="text-muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.5px' }}>Leverage</div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                                {rangeAPR ? `${rangeAPR.leverage.toFixed(1)}x` : '1.0x'}
+                                {leverage.toFixed(1)}x
                             </div>
                         </div>
                         <div style={{ textAlign: 'center' }}>

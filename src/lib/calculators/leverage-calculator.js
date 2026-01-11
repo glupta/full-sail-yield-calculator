@@ -1,18 +1,19 @@
 /**
- * Leverage & Estimated APR Calculator
- * Calculates concentration leverage for CLMM positions based on price range
- */
-
-/**
  * Calculate leverage factor from price range
  * Narrower range = higher leverage = higher estimated APR
  * 
- * Formula: L = 1 / (sqrt(Pl/Pc) - sqrt(Ph/Pc) + 1)
- * Where Pl = low price, Ph = high price, Pc = current price
+ * Full Sail's leverage formula (verified from app):
+ * L = 1 / (1 - sqrt(priceLow / currentPrice))
+ * 
+ * This formula represents capital efficiency based on how close the lower
+ * bound is to the current price. Verified against Full Sail UI:
+ * - Wide (-50%): sqrt(0.5) = 0.707, L = 1/(1-0.707) = 3.41x ✓
+ * - ±10%: sqrt(0.9) = 0.949, L = 1/(1-0.949) = 19.6x ≈ 20x ✓
+ * - ±1%: sqrt(0.99) = 0.995, L = 1/(1-0.995) = 200x ✓
  * 
  * @param {number} currentPrice - Current pool price
  * @param {number} priceLow - Lower bound of price range
- * @param {number} priceHigh - Upper bound of price range
+ * @param {number} priceHigh - Upper bound of price range (used for validation)
  * @returns {number} - Leverage factor (1x = full range, higher = more concentrated)
  */
 export function calculateLeverage(currentPrice, priceLow, priceHigh) {
@@ -21,20 +22,21 @@ export function calculateLeverage(currentPrice, priceLow, priceHigh) {
     if (priceLow <= 0 || priceHigh <= 0) return 1;
     if (priceLow >= priceHigh) return 1;
 
-    // If current price is outside the range, leverage calculation differs
+    // If current price is outside the range, position is out of range
     if (currentPrice <= priceLow || currentPrice >= priceHigh) {
-        // Position is out of range - calculate based on full range width
-        const rangeRatio = priceHigh / priceLow;
-        return 1 / (Math.sqrt(rangeRatio) - 1);
+        // Position is out of range - return minimum leverage
+        return 1;
     }
 
-    // Standard concentrated liquidity leverage formula
-    const sqrtLow = Math.sqrt(priceLow / currentPrice);
-    const sqrtHigh = Math.sqrt(priceHigh / currentPrice);
+    // Full Sail leverage formula: L = 1 / (1 - sqrt(priceLow / currentPrice))
+    const sqrtRatio = Math.sqrt(priceLow / currentPrice);
 
-    // Leverage = 1 / (sqrtHigh - sqrtLow)
-    // This gives higher leverage for tighter ranges
-    const leverage = 1 / (sqrtHigh - sqrtLow);
+    // Guard against division by zero when priceLow approaches currentPrice
+    if (sqrtRatio >= 0.9999) {
+        return 10000; // Cap at very high leverage
+    }
+
+    const leverage = 1 / (1 - sqrtRatio);
 
     return Math.max(1, leverage);
 }
@@ -55,10 +57,12 @@ export function calculateEstimatedAPR(baseAPR, leverage) {
 }
 
 /**
- * Full Sail assumes pool.full_apr is reported at ±10% concentration (~20x leverage).
- * This constant represents that baseline leverage.
+ * Full Sail's pool.full_apr is reported at approximately ±8% concentration (~17.5x leverage).
+ * This was derived by back-calculating from the Full Sail app:
+ * - WBTC/USDC pool: full_apr = 50.18%, Wide range (-50%, +100%) shows 9.8% APR with 3.41x leverage
+ * - Base APR = 50.18 / 17.5 ≈ 2.87%, which when multiplied by wide range leverage gives ~9.8%
  */
-const BASELINE_LEVERAGE = 20; // ±10% range gives ~20x leverage
+const BASELINE_LEVERAGE = 17.5;
 
 /**
  * Derive the true Base APR (full-range, 1x leverage) from the pool's reported full_apr.
