@@ -364,18 +364,248 @@ describe('calculateScenarioResults - IL calculation', () => {
         expect(result.ilDollar).toBeCloseTo(572, 0);
     });
 
-    it('should use volatility-based IL when no exit price provided', () => {
+    it('should default to 0 IL when no exit price provided (defaults to current price)', () => {
         const scenario = {
             pool: basePool,
             depositAmount: 10000,
             timeline: 30,
             osailStrategy: 50,
-            exitPrice: null, // No exit price
+            exitPrice: null, // No exit price - should default to current price
         };
         const result = calculateScenarioResults(scenario);
 
-        // Should use volatility estimation (expected scenario)
-        expect(result.ilPercent).toBeLessThan(0); // IL is always negative
-        expect(result.ilDollar).toBeGreaterThan(0);
+        // When no exit price is set, it defaults to current price = 0 IL
+        expect(result.ilPercent).toBe(0);
+        expect(result.ilDollar).toBe(0);
+    });
+});
+
+describe('calculateScenarioResults - Range-based IL amplification', () => {
+    const basePool = {
+        id: 'test-pool',
+        name: 'TEST/USDC',
+        dinamic_stats: { tvl: 1000000 },
+        distributed_osail_24h: 1e9 * 100,
+        currentPrice: 1.0, // Entry price
+    };
+
+    it('should have higher IL for narrower price ranges', () => {
+        // Wide range: ±50%
+        const wideRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.5,  // -50%
+            priceRangeHigh: 1.5, // +50%
+            exitPrice: 1.1, // 10% increase, still in range
+        };
+        const wideResult = calculateScenarioResults(wideRangeScenario);
+
+        // Narrow range: ±10%
+        const narrowRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.9,  // -10%
+            priceRangeHigh: 1.1, // +10%
+            exitPrice: 1.1, // 10% increase, at edge of range
+        };
+        const narrowResult = calculateScenarioResults(narrowRangeScenario);
+
+        console.log('Wide range IL:', wideResult.ilDollar, 'ilPercent:', wideResult.ilPercent);
+        console.log('Narrow range IL:', narrowResult.ilDollar, 'ilPercent:', narrowResult.ilPercent);
+
+        // Narrower range should have HIGHER IL (worse)
+        expect(Math.abs(narrowResult.ilPercent)).toBeGreaterThan(Math.abs(wideResult.ilPercent));
+        expect(narrowResult.ilDollar).toBeGreaterThan(wideResult.ilDollar);
+    });
+
+    it('should have very high IL for very narrow (±1%) range', () => {
+        // Narrow range: ±1%
+        const veryNarrowScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.99,  // -1%
+            priceRangeHigh: 1.01, // +1%
+            exitPrice: 1.01, // 1% increase, at edge of range
+        };
+        const veryNarrowResult = calculateScenarioResults(veryNarrowScenario);
+
+        // Standard range: ±10%
+        const standardRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.9,  // -10%
+            priceRangeHigh: 1.1, // +10%
+            exitPrice: 1.01, // Same 1% increase
+        };
+        const standardResult = calculateScenarioResults(standardRangeScenario);
+
+        console.log('±1% range IL:', veryNarrowResult.ilDollar, 'leverage ~50x');
+        console.log('±10% range IL:', standardResult.ilDollar, 'leverage ~5x');
+
+        // ±1% range should have ~10x higher IL than ±10% range for same price move
+        expect(veryNarrowResult.ilDollar).toBeGreaterThan(standardResult.ilDollar * 5);
+    });
+
+    it('should have MORE IL for ±1% range than full range', () => {
+        // Narrow range: ±1%
+        const narrowScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.99,  // ±1%
+            priceRangeHigh: 1.01,
+            exitPrice: 1.05, // 5% increase
+        };
+        const narrowResult = calculateScenarioResults(narrowScenario);
+
+        // Full range (essentially no concentration)
+        const fullRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.01,  // ~full range
+            priceRangeHigh: 100,
+            exitPrice: 1.05, // Same 5% increase
+        };
+        const fullResult = calculateScenarioResults(fullRangeScenario);
+
+        console.log('±1% range IL:', narrowResult.ilDollar, 'ilPercent:', narrowResult.ilPercent);
+        console.log('Full range IL:', fullResult.ilDollar, 'ilPercent:', fullResult.ilPercent);
+
+        // Log leverage ratio for debugging (IL ratio should match leverage ratio)
+        const ilRatio = narrowResult.ilDollar / fullResult.ilDollar;
+        console.log('IL ratio (±1% / Full):', ilRatio.toFixed(2), 'x');
+
+        // ±1% range should have HIGHER IL (worse) than full range
+        expect(narrowResult.ilDollar).toBeGreaterThan(fullResult.ilDollar);
+    });
+
+    it('should cap IL at boundary when price exits range', () => {
+        // Narrow range: ±5%
+        const scenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.95,  // -5%
+            priceRangeHigh: 1.05, // +5%
+            exitPrice: 1.20, // 20% increase, WAY beyond range
+        };
+        const result = calculateScenarioResults(scenario);
+
+        // IL should be calculated at boundary (1.05), not at exit price (1.20)
+        // This means IL is the same whether exit is 1.10 or 1.50 if range ends at 1.05
+        const scenarioMoreExtreme = {
+            ...scenario,
+            exitPrice: 1.50, // Even further beyond range
+        };
+        const resultExtreme = calculateScenarioResults(scenarioMoreExtreme);
+
+        console.log('Exit at 1.20 IL:', result.ilDollar);
+        console.log('Exit at 1.50 IL:', resultExtreme.ilDollar);
+
+        // IL should be the same (capped at boundary)
+        expect(result.ilDollar).toBeCloseTo(resultExtreme.ilDollar, 0);
+    });
+
+    it('should have 0 IL when exit price equals current price regardless of range', () => {
+        const narrowScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 50,
+            priceRangeLow: 0.99,
+            priceRangeHigh: 1.01,
+            exitPrice: 1.0, // Same as current
+        };
+        const result = calculateScenarioResults(narrowScenario);
+
+        expect(result.ilPercent).toBe(0);
+        expect(result.ilDollar).toBe(0);
+    });
+});
+
+describe('calculateScenarioResults - Range-based SAIL earnings', () => {
+    const basePool = {
+        id: 'test-pool',
+        name: 'TEST/USDC',
+        dinamic_stats: { tvl: 1000000 },
+        distributed_osail_24h: 1e9 * 100, // 100 oSAIL/day
+        currentPrice: 1.0,
+    };
+
+    it('should earn more SAIL with narrower price range (higher leverage)', () => {
+        // Wide range
+        const wideScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 100,
+            priceRangeLow: 0.5,
+            priceRangeHigh: 1.5,
+            exitPrice: 1.0, // Stay at current price
+        };
+        const wideResult = calculateScenarioResults(wideScenario);
+
+        // Narrow range
+        const narrowScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 100,
+            priceRangeLow: 0.9,
+            priceRangeHigh: 1.1,
+            exitPrice: 1.0, // Stay at current price
+        };
+        const narrowResult = calculateScenarioResults(narrowScenario);
+
+        console.log('Wide range SAIL:', wideResult.projectedOsail);
+        console.log('Narrow range SAIL:', narrowResult.projectedOsail);
+
+        // Narrower range = higher leverage = more SAIL earned
+        expect(narrowResult.projectedOsail).toBeGreaterThan(wideResult.projectedOsail);
+        expect(narrowResult.osailValue).toBeGreaterThan(wideResult.osailValue);
+    });
+
+    it('should earn less SAIL if price exits range (time out of range)', () => {
+        // Price stays in range
+        const inRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 100,
+            priceRangeLow: 0.9,
+            priceRangeHigh: 1.1,
+            exitPrice: 1.05, // Within range
+        };
+        const inRangeResult = calculateScenarioResults(inRangeScenario);
+
+        // Price exits range (linear movement to 1.2 means ~50% time in range)
+        const outOfRangeScenario = {
+            pool: basePool,
+            depositAmount: 10000,
+            timeline: 30,
+            osailStrategy: 100,
+            priceRangeLow: 0.9,
+            priceRangeHigh: 1.1,
+            exitPrice: 1.2, // Beyond range - exits at 1.1, so only 50% time in range
+        };
+        const outOfRangeResult = calculateScenarioResults(outOfRangeScenario);
+
+        console.log('In-range SAIL:', inRangeResult.projectedOsail);
+        console.log('Out-of-range SAIL:', outOfRangeResult.projectedOsail);
+
+        // Should earn less when price exits range
+        expect(outOfRangeResult.projectedOsail).toBeLessThan(inRangeResult.projectedOsail);
     });
 });

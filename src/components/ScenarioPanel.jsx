@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { STRATEGY_PRESETS } from '../lib/calculators/osail-strategy';
+import { calculateRangeAPR, RANGE_PRESETS, getPriceRangeFromPercent } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
 
 export default function ScenarioPanel({
@@ -24,6 +25,16 @@ export default function ScenarioPanel({
     const results = useMemo(() => {
         return calculateScenarioResults(scenario);
     }, [scenario]);
+
+    // Calculate estimated APR based on price range concentration
+    const rangeAPR = useMemo(() => {
+        if (!pool?.full_apr || !pool?.currentPrice) return null;
+        const priceLow = scenario.priceRangeLow;
+        const priceHigh = scenario.priceRangeHigh;
+        if (!priceLow || !priceHigh) return null;
+
+        return calculateRangeAPR(pool.full_apr, pool.currentPrice, priceLow, priceHigh);
+    }, [pool?.full_apr, pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
 
     const formatUsd = (val) => `$${val.toFixed(2)}`;
     const formatOsail = (val) => `${val.toFixed(2)} SAIL`;
@@ -91,7 +102,6 @@ export default function ScenarioPanel({
                 )}
                 {pool && (
                     <div className="flex gap-md mt-sm text-muted" style={{ fontSize: '0.75rem' }}>
-                        <span>APR: <span className="text-success">{pool.full_apr?.toFixed(1) || 0}%</span></span>
                         <span>TVL: {formatTVL(pool.dinamic_stats?.tvl)}</span>
                     </div>
                 )}
@@ -108,8 +118,19 @@ export default function ScenarioPanel({
                         <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>$</span>
                         <input
                             type="number"
+                            min="0"
                             value={scenario.depositAmount}
-                            onChange={(e) => onChange({ depositAmount: Number(e.target.value) })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || val === null) {
+                                    onChange({ depositAmount: 0 });
+                                } else {
+                                    const numVal = parseFloat(val);
+                                    if (!isNaN(numVal) && numVal >= 0) {
+                                        onChange({ depositAmount: numVal });
+                                    }
+                                }
+                            }}
                             style={{ width: '100%', paddingLeft: '24px' }}
                         />
                     </div>
@@ -123,17 +144,41 @@ export default function ScenarioPanel({
                     </label>
                     <input
                         type="number"
-                        step="0.01"
-                        value={scenario.exitPrice ?? (pool?.currentPrice ? roundToSigFigs(pool.currentPrice) : '')}
-                        onChange={(e) => onChange({ exitPrice: e.target.value === '' ? null : Number(e.target.value) })}
+                        step="any"
+                        value={scenario.exitPrice !== null && scenario.exitPrice !== undefined
+                            ? scenario.exitPrice
+                            : (pool?.currentPrice ? roundToSigFigs(pool.currentPrice) : '')}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            // Allow empty string to reset to null
+                            if (val === '' || val === null) {
+                                onChange({ exitPrice: null });
+                            } else {
+                                const numVal = parseFloat(val);
+                                if (!isNaN(numVal)) {
+                                    onChange({ exitPrice: numVal });
+                                }
+                            }
+                        }}
                         style={{ width: '100%' }}
                         placeholder="Exit price"
                     />
                     {pool?.currentPrice && (
                         <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
                             {(() => {
-                                const exitPrice = scenario.exitPrice ?? pool.currentPrice;
-                                const change = ((exitPrice / pool.currentPrice - 1) * 100);
+                                // Use the explicitly set exitPrice, or fall back to currentPrice
+                                const exitPrice = scenario.exitPrice !== null && scenario.exitPrice !== undefined
+                                    ? scenario.exitPrice
+                                    : pool.currentPrice;
+
+                                // Calculate percentage change from current price
+                                const change = ((exitPrice / pool.currentPrice) - 1) * 100;
+
+                                // Handle edge cases
+                                if (!isFinite(change) || isNaN(change)) {
+                                    return '0.0% price change';
+                                }
+
                                 return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% price change`;
                             })()}
                         </div>
@@ -153,34 +198,110 @@ export default function ScenarioPanel({
                         </span>
                     )}
                 </label>
+
+                {/* Range Preset Buttons */}
+                {pool?.currentPrice && (
+                    <div className="flex gap-sm mb-sm">
+                        {RANGE_PRESETS.map(preset => (
+                            <button
+                                key={preset.label}
+                                className="btn btn-secondary"
+                                onClick={() => {
+                                    const range = getPriceRangeFromPercent(
+                                        pool.currentPrice,
+                                        preset.lowerPct,
+                                        preset.upperPct
+                                    );
+                                    onChange({
+                                        priceRangeLow: roundToSigFigs(range.priceLow, 4),
+                                        priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
+                                    });
+                                }}
+                                style={{ flex: 1, padding: '4px 6px', fontSize: '0.7rem' }}
+                                title={preset.description}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Estimated APR Display */}
+                {rangeAPR && (
+                    <div
+                        className="flex justify-between items-center mb-sm"
+                        style={{
+                            padding: 'var(--space-xs) var(--space-sm)',
+                            background: 'rgba(var(--color-success-rgb), 0.1)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid rgba(var(--color-success-rgb), 0.2)'
+                        }}
+                    >
+                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                            Estimated APR
+                        </span>
+                        <span className="text-success" style={{ fontWeight: 600 }}>
+                            {rangeAPR.estimatedAPR.toFixed(1)}%
+                        </span>
+                    </div>
+                )}
+
                 <div className="flex gap-sm">
                     <div style={{ width: '50%' }}>
                         <input
                             type="number"
-                            step="0.01"
+                            step="any"
                             value={scenario.priceRangeLow ?? ''}
-                            onChange={(e) => onChange({ priceRangeLow: e.target.value === '' ? null : Number(e.target.value) })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || val === null) {
+                                    onChange({ priceRangeLow: null });
+                                } else {
+                                    const numVal = parseFloat(val);
+                                    if (!isNaN(numVal)) {
+                                        onChange({ priceRangeLow: numVal });
+                                    }
+                                }
+                            }}
                             style={{ width: '100%' }}
                             placeholder="Low"
                         />
                         {pool?.currentPrice && scenario.priceRangeLow > 0 && (
                             <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                                {((scenario.priceRangeLow / pool.currentPrice - 1) * 100).toFixed(1)}% from current
+                                {(() => {
+                                    const change = ((scenario.priceRangeLow / pool.currentPrice) - 1) * 100;
+                                    if (!isFinite(change) || isNaN(change)) return '0.0% from current';
+                                    return `${change.toFixed(1)}% from current`;
+                                })()}
                             </div>
                         )}
                     </div>
                     <div style={{ width: '50%' }}>
                         <input
                             type="number"
-                            step="0.01"
+                            step="any"
                             value={scenario.priceRangeHigh ?? ''}
-                            onChange={(e) => onChange({ priceRangeHigh: e.target.value === '' ? null : Number(e.target.value) })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || val === null) {
+                                    onChange({ priceRangeHigh: null });
+                                } else {
+                                    const numVal = parseFloat(val);
+                                    if (!isNaN(numVal)) {
+                                        onChange({ priceRangeHigh: numVal });
+                                    }
+                                }
+                            }}
                             style={{ width: '100%' }}
                             placeholder="High"
                         />
                         {pool?.currentPrice && scenario.priceRangeHigh > 0 && (
                             <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                                +{((scenario.priceRangeHigh / pool.currentPrice - 1) * 100).toFixed(1)}% from current
+                                {(() => {
+                                    const change = ((scenario.priceRangeHigh / pool.currentPrice) - 1) * 100;
+                                    if (!isFinite(change) || isNaN(change)) return '+0.0% from current';
+                                    return `+${change.toFixed(1)}% from current`;
+                                })()}
                             </div>
                         )}
                     </div>
@@ -254,7 +375,6 @@ export default function ScenarioPanel({
                             <span></span>
                             <div className="flex" style={{ gap: 'var(--space-md)' }}>
                                 <span style={{ width: '70px', textAlign: 'right' }}>Amount</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>Return</span>
                                 <span style={{ width: '50px', textAlign: 'right' }}>APR</span>
                             </div>
                         </div>
@@ -271,7 +391,6 @@ export default function ScenarioPanel({
                             </span>
                             <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                 <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.osailValue)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.osailValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                 <span style={{ width: '50px', textAlign: 'right' }}>{results.sailAPR?.toFixed(1) || '0.0'}%</span>
                             </div>
                         </div>
@@ -288,7 +407,6 @@ export default function ScenarioPanel({
                                     <span>→ Redeemed (liquid)</span>
                                     <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                         <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.redeemValue)}</span>
-                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.redeemValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                         <span style={{ width: '50px', textAlign: 'right' }}>{results.redeemAPR?.toFixed(1) || '0.0'}%</span>
                                     </div>
                                 </div>
@@ -296,7 +414,6 @@ export default function ScenarioPanel({
                                     <span>→ Locked (veSAIL)</span>
                                     <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                         <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.lockValue)}</span>
-                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.lockValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                         <span style={{ width: '50px', textAlign: 'right' }}>{results.lockAPR?.toFixed(1) || '0.0'}%</span>
                                     </div>
                                 </div>
@@ -317,7 +434,6 @@ export default function ScenarioPanel({
                                     </span>
                                     <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                         <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.externalRewardsValue)}</span>
-                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.externalRewardsValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                         <span style={{ width: '50px', textAlign: 'right' }}>{results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%</span>
                                     </div>
                                 </div>
@@ -335,7 +451,6 @@ export default function ScenarioPanel({
                                                 <span>→ {reward.token}</span>
                                                 <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                                     <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(reward.projectedValue)}</span>
-                                                    <span style={{ width: '50px', textAlign: 'right' }}>{((reward.projectedValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                                     <span style={{ width: '50px', textAlign: 'right' }}>{reward.apr.toFixed(1)}%</span>
                                                 </div>
                                             </div>
@@ -350,7 +465,6 @@ export default function ScenarioPanel({
                             <span className="text-muted">Impermanent Loss</span>
                             <div className="flex text-error" style={{ gap: 'var(--space-md)' }}>
                                 <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.ilDollar)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.ilDollar / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                 <span style={{ width: '50px', textAlign: 'right' }}>{(Math.abs(results.ilPercent) * 100 * (365 / scenario.timeline)).toFixed(1)}%</span>
                             </div>
                         </div>
@@ -368,7 +482,6 @@ export default function ScenarioPanel({
                             <span>Net Yield {isWinner && '✓'}</span>
                             <div className={`flex ${results.netYield >= 0 ? 'text-success' : 'text-error'}`} style={{ gap: 'var(--space-md)' }}>
                                 <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.netYield)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.netYield / scenario.depositAmount) * 100).toFixed(1)}%</span>
                                 <span style={{ width: '50px', textAlign: 'right' }}>{((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}%</span>
                             </div>
                         </div>
