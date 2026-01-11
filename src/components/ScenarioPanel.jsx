@@ -349,6 +349,9 @@ export default function ScenarioPanel({
                             <span>Net Yield</span>
                             <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
                                 {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
+                                <span style={{ marginLeft: '6px', fontSize: '0.85rem', opacity: 0.9 }}>
+                                    ({((results.netYield / scenario.depositAmount) * 100).toFixed(1)}%)
+                                </span>
                                 {isWinner && ' ✓'}
                             </span>
                         </div>
