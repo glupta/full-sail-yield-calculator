@@ -199,15 +199,7 @@ export default function ScenarioPanel({
                             : `${scenario.timeline}d`}
                     </span>
                 </label>
-                <input
-                    type="range"
-                    min="30"
-                    max="1460"
-                    step="1"
-                    value={scenario.timeline}
-                    onChange={(e) => onChange({ timeline: Number(e.target.value) })}
-                />
-                <div className="flex gap-sm mt-sm">
+                <div className="flex gap-sm">
                     {[
                         { label: '1m', days: 30 },
                         { label: '3m', days: 90 },
@@ -243,18 +235,6 @@ export default function ScenarioPanel({
                 <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
                     <span>Redeem ({100 - scenario.osailStrategy}%)</span>
                     <span>Lock ({scenario.osailStrategy}%)</span>
-                </div>
-                <div className="flex gap-sm mt-sm">
-                    {Object.values(STRATEGY_PRESETS).map(preset => (
-                        <button
-                            key={preset.name}
-                            className="btn btn-secondary"
-                            onClick={() => onChange({ osailStrategy: preset.lockPct * 100 })}
-                            style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }}
-                        >
-                            {preset.name}
-                        </button>
-                    ))}
                 </div>
             </div>
 
