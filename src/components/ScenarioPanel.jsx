@@ -58,7 +58,7 @@ export default function ScenarioPanel({
     }, [pool, scenario]);
 
     const formatUsd = (val) => `$${val.toFixed(2)}`;
-    const formatOsail = (val) => `${val.toFixed(2)} oSAIL`;
+    const formatOsail = (val) => `${val.toFixed(2)} SAIL`;
 
     const formatTVL = (tvl) => {
         if (!tvl) return '$0';
@@ -233,7 +233,7 @@ export default function ScenarioPanel({
             {/* oSAIL Strategy */}
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    oSAIL Strategy
+                    SAIL Strategy
                 </label>
                 <input
                     type="range"
@@ -270,11 +270,11 @@ export default function ScenarioPanel({
                     <h4 className="mb-md">Results</h4>
                     <div className="flex flex-col gap-sm">
                         <div className="flex justify-between">
-                            <span className="text-muted">oSAIL Emissions</span>
+                            <span className="text-muted">SAIL Emissions</span>
                             <span>{formatOsail(results.projectedOsail)}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-muted">oSAIL Value</span>
+                            <span className="text-muted">SAIL Value</span>
                             <span className="text-success">{formatUsd(results.osailValue)}</span>
                         </div>
                         <div className="flex justify-between">

@@ -112,6 +112,33 @@ export default function LPCalculator() {
 
     return (
         <div>
+            {/* Portfolio Summary - at top */}
+            {totals.scenarioCount > 0 && (
+                <div className="glass-card mb-lg">
+                    <h4 className="mb-md">Portfolio Summary</h4>
+                    <div className="grid-4" style={{ gap: 'var(--space-md)' }}>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Total Deposit</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatUsd(totals.totalDeposit)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Projected SAIL</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.totalOsail.toFixed(2)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Est. IL</div>
+                            <div className="text-error" style={{ fontSize: '1.25rem', fontWeight: 600 }}>-{formatUsd(totals.totalIL)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Net Yield</div>
+                            <div className={totals.totalNetYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                                {totals.totalNetYield >= 0 ? '' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-between items-center mb-md">
                 <h3>Scenarios</h3>
                 {scenarios.length < 3 && (
@@ -135,33 +162,6 @@ export default function LPCalculator() {
                     />
                 ))}
             </div>
-
-            {/* Total Yield Summary */}
-            {totals.scenarioCount > 0 && (
-                <div className="glass-card mt-lg">
-                    <h4 className="mb-md">Portfolio Summary</h4>
-                    <div className="grid-4" style={{ gap: 'var(--space-md)' }}>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Total Deposit</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatUsd(totals.totalDeposit)}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Projected oSAIL</div>
-                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.totalOsail.toFixed(2)}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Est. IL</div>
-                            <div className="text-error" style={{ fontSize: '1.25rem', fontWeight: 600 }}>-{formatUsd(totals.totalIL)}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Net Yield</div>
-                            <div className={totals.totalNetYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-                                {totals.totalNetYield >= 0 ? '' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
