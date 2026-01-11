@@ -135,3 +135,33 @@ export const RANGE_PRESETS = [
     { label: 'Narrow', sublabel: '(±10%)', lowerPct: -10, upperPct: 10, description: 'Higher risk, ~10x leverage' },
     { label: 'Spot', sublabel: '(±2%)', lowerPct: -2, upperPct: 2, description: 'Highest risk, ~50x leverage' },
 ];
+
+/**
+ * Preset range configurations for stablecoin pools
+ * Much tighter ranges since stable pairs have minimal price deviation
+ */
+export const STABLE_RANGE_PRESETS = [
+    { label: 'Wide', sublabel: '(±2%)', lowerPct: -2, upperPct: 2, description: 'Safe stable range, ~50x leverage' },
+    { label: 'Balanced', sublabel: '(±1%)', lowerPct: -1, upperPct: 1, description: 'Standard stable, ~100x leverage' },
+    { label: 'Narrow', sublabel: '(±0.5%)', lowerPct: -0.5, upperPct: 0.5, description: 'Tight stable, ~200x leverage' },
+    { label: 'Spot', sublabel: '(±0.1%)', lowerPct: -0.1, upperPct: 0.1, description: 'Very tight, ~1000x leverage' },
+];
+
+/**
+ * Detect if a pool is a stablecoin pool based on token names
+ * @param {object} pool - Pool object with token0_symbol and token1_symbol
+ * @returns {boolean} - True if pool contains stablecoins on both sides
+ */
+export function isStablePool(pool) {
+    if (!pool) return false;
+
+    const stableTokens = ['USDC', 'USDT', 'DAI', 'USDY', 'AUSD', 'BUSD', 'TUSD', 'FRAX', 'LUSD', 'SUSD'];
+    const token0 = (pool.token0_symbol || '').toUpperCase();
+    const token1 = (pool.token1_symbol || '').toUpperCase();
+
+    // Check if both tokens are stablecoins
+    const token0IsStable = stableTokens.some(s => token0.includes(s));
+    const token1IsStable = stableTokens.some(s => token1.includes(s));
+
+    return token0IsStable && token1IsStable;
+}

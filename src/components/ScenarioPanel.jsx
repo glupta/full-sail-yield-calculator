@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { STRATEGY_PRESETS } from '../lib/calculators/osail-strategy';
-import { calculateRangeAPR, RANGE_PRESETS, getPriceRangeFromPercent } from '../lib/calculators/leverage-calculator';
+import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
 
 export default function ScenarioPanel({
@@ -200,32 +200,35 @@ export default function ScenarioPanel({
                 </label>
 
                 {/* Range Preset Buttons */}
-                {pool?.currentPrice && (
-                    <div className="flex gap-sm mb-sm">
-                        {RANGE_PRESETS.map(preset => (
-                            <button
-                                key={preset.label}
-                                className="btn btn-secondary"
-                                onClick={() => {
-                                    const range = getPriceRangeFromPercent(
-                                        pool.currentPrice,
-                                        preset.lowerPct,
-                                        preset.upperPct
-                                    );
-                                    onChange({
-                                        priceRangeLow: roundToSigFigs(range.priceLow, 4),
-                                        priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
-                                    });
-                                }}
-                                style={{ flex: 1, padding: '6px 4px', fontSize: '0.65rem', lineHeight: 1.2 }}
-                                title={preset.description}
-                            >
-                                <div style={{ fontWeight: 600 }}>{preset.label}</div>
-                                <div style={{ opacity: 0.7, fontSize: '0.55rem' }}>{preset.sublabel}</div>
-                            </button>
-                        ))}
-                    </div>
-                )}
+                {pool?.currentPrice && (() => {
+                    const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
+                    return (
+                        <div className="flex gap-sm mb-sm">
+                            {presets.map(preset => (
+                                <button
+                                    key={preset.label}
+                                    className="btn btn-secondary"
+                                    onClick={() => {
+                                        const range = getPriceRangeFromPercent(
+                                            pool.currentPrice,
+                                            preset.lowerPct,
+                                            preset.upperPct
+                                        );
+                                        onChange({
+                                            priceRangeLow: roundToSigFigs(range.priceLow, 4),
+                                            priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
+                                        });
+                                    }}
+                                    style={{ flex: 1, padding: '6px 4px', fontSize: '0.65rem', lineHeight: 1.2 }}
+                                    title={preset.description}
+                                >
+                                    <div style={{ fontWeight: 600 }}>{preset.label}</div>
+                                    <div style={{ opacity: 0.7, fontSize: '0.55rem' }}>{preset.sublabel}</div>
+                                </button>
+                            ))}
+                        </div>
+                    );
+                })()}
 
                 {/* Estimated APR Display */}
                 {rangeAPR && (
