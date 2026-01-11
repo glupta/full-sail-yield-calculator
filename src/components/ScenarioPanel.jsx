@@ -193,11 +193,6 @@ export default function ScenarioPanel({
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
                     Timeline
-                    <span style={{ float: 'right', color: 'var(--text-primary)' }}>
-                        {scenario.timeline >= 365
-                            ? `${(scenario.timeline / 365).toFixed(1)}y`
-                            : `${scenario.timeline}d`}
-                    </span>
                 </label>
                 <div className="flex gap-sm">
                     {[
