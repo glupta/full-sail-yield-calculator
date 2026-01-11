@@ -97,19 +97,47 @@ export default function ScenarioPanel({
                 )}
             </div>
 
-            {/* Deposit Amount */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    Deposit Amount
-                </label>
-                <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>$</span>
+            {/* Deposit Amount & Exit Price - inline */}
+            <div className="flex gap-md mb-md">
+                {/* Deposit Amount */}
+                <div style={{ flex: 1 }}>
+                    <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                        Deposit Amount
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>$</span>
+                        <input
+                            type="number"
+                            value={scenario.depositAmount}
+                            onChange={(e) => onChange({ depositAmount: Number(e.target.value) })}
+                            style={{ width: '100%', paddingLeft: '24px' }}
+                        />
+                    </div>
+                </div>
+
+                {/* Exit Price */}
+                <div style={{ flex: 1 }}>
+                    <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                        Exit Price
+                        <span className="text-muted" style={{ fontSize: '0.65rem', marginLeft: '4px' }}>(IL calc)</span>
+                    </label>
                     <input
                         type="number"
-                        value={scenario.depositAmount}
-                        onChange={(e) => onChange({ depositAmount: Number(e.target.value) })}
-                        style={{ width: '100%', paddingLeft: '24px' }}
+                        step="0.01"
+                        value={scenario.exitPrice ?? (pool?.currentPrice ? roundToSigFigs(pool.currentPrice) : '')}
+                        onChange={(e) => onChange({ exitPrice: e.target.value === '' ? null : Number(e.target.value) })}
+                        style={{ width: '100%' }}
+                        placeholder="Exit price"
                     />
+                    {pool?.currentPrice && (
+                        <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                            {(() => {
+                                const exitPrice = scenario.exitPrice ?? pool.currentPrice;
+                                const change = ((exitPrice / pool.currentPrice - 1) * 100);
+                                return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% price change`;
+                            })()}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -159,32 +187,7 @@ export default function ScenarioPanel({
                 </div>
             </div>
 
-            {/* Exit Price - for IL calculation */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    Target Exit Price
-                    <span className="text-muted" style={{ float: 'right', fontSize: '0.7rem' }}>
-                        (for IL calc)
-                    </span>
-                </label>
-                <input
-                    type="number"
-                    step="0.01"
-                    value={scenario.exitPrice ?? (pool?.currentPrice ? roundToSigFigs(pool.currentPrice) : '')}
-                    onChange={(e) => onChange({ exitPrice: e.target.value === '' ? null : Number(e.target.value) })}
-                    style={{ width: '100%' }}
-                    placeholder="Exit price"
-                />
-                {pool?.currentPrice && (
-                    <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                        {(() => {
-                            const exitPrice = scenario.exitPrice ?? pool.currentPrice;
-                            const change = ((exitPrice / pool.currentPrice - 1) * 100);
-                            return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% price change`;
-                        })()}
-                    </div>
-                )}
-            </div>
+
 
             {/* Timeline */}
             <div className="mb-md">
