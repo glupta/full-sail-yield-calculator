@@ -161,36 +161,6 @@ export default function ScenarioPanel({
                 )}
             </div>
 
-            {/* Timeline */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                    Timeline
-                </label>
-                <div className="flex gap-xs" style={{ flexWrap: 'wrap' }}>
-                    {[
-                        { label: '1m', days: 30 },
-                        { label: '3m', days: 90 },
-                        { label: '6m', days: 180 },
-                        { label: '1y', days: 365 },
-                        { label: '2y', days: 730 },
-                        { label: '4y', days: 1460 },
-                    ].map(preset => (
-                        <button
-                            key={preset.label}
-                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => onChange({ timeline: preset.days })}
-                            style={{
-                                flex: '1 1 auto',
-                                minWidth: '42px',
-                                padding: '8px 10px',
-                                fontSize: '0.75rem'
-                            }}
-                        >
-                            {preset.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
 
             {/* Deposit Amount & Exit Price - Responsive stack on mobile */}
             <div className="flex gap-md mb-md mobile-stack">
@@ -379,62 +349,25 @@ export default function ScenarioPanel({
                             </div>
                         )}
                     </div>
-                </div>
-            </div>
 
-            {/* Claim Strategy */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                    Claim Strategy
-                </label>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={scenario.osailStrategy}
-                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
-                />
-                <div className="flex justify-between text-muted" style={{ fontSize: '0.7rem', marginTop: '4px' }}>
-                    <span>Redeem ({100 - scenario.osailStrategy}%)</span>
-                    <span>Lock ({scenario.osailStrategy}%)</span>
-                </div>
-
-                {/* Lock incentive display */}
-                {results && (
-                    <div
-                        className="mt-sm"
-                        style={{
-                            padding: 'var(--space-xs) var(--space-sm)',
-                            background: scenario.osailStrategy > 50
-                                ? 'rgba(34, 197, 94, 0.08)'
-                                : 'rgba(255, 255, 255, 0.02)',
-                            borderRadius: 'var(--radius-md)',
-                            border: scenario.osailStrategy > 50
-                                ? '1px solid rgba(34, 197, 94, 0.2)'
-                                : '1px solid var(--border-subtle)',
-                            fontSize: '0.7rem',
-                            textAlign: 'center',
-                            transition: 'all var(--duration-normal) var(--ease-out)'
-                        }}
-                    >
-                        {(() => {
-                            const currentValue = results.osailValue;
-                            const maxLockValue = results.projectedOsail * 0.5;
-                            const potentialGain = maxLockValue - currentValue;
-
-                            if (scenario.osailStrategy >= 100) {
-                                return <span className="text-success">✓ Maximum SAIL earnings at 100% lock</span>;
-                            } else if (potentialGain > 0) {
-                                return (
-                                    <span>
-                                        Lock more to earn <span className="text-success" style={{ fontWeight: 600 }}>+${potentialGain.toFixed(0)}</span> more SAIL
-                                    </span>
-                                );
-                            }
-                            return null;
-                        })()}
+                    {/* Claim Strategy - inline with price range */}
+                    <div style={{ flex: 1, minWidth: '180px' }}>
+                        <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
+                            Claim Strategy
+                        </label>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={scenario.osailStrategy}
+                            onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
+                        />
+                        <div className="flex justify-between text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
+                            <span>Redeem ({100 - scenario.osailStrategy}%)</span>
+                            <span>Lock ({scenario.osailStrategy}%)</span>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Results */}
@@ -533,14 +466,14 @@ export default function ScenarioPanel({
                             }}
                         >
                             <div className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
-                                <span>→ Redeemed (liquid)</span>
+                                <span>Redeemed (liquid)</span>
                                 <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                     <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.redeemValue)}</span>
                                     <span style={{ width: '50px', textAlign: 'right' }}>{results.redeemAPR?.toFixed(1) || '0.0'}%</span>
                                 </div>
                             </div>
                             <div className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
-                                <span>→ Locked (veSAIL)</span>
+                                <span>Locked (veSAIL)</span>
                                 <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                     <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.lockValue)}</span>
                                     <span style={{ width: '50px', textAlign: 'right' }}>{results.lockAPR?.toFixed(1) || '0.0'}%</span>
