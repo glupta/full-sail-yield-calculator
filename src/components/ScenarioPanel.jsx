@@ -107,6 +107,32 @@ export default function ScenarioPanel({
                 )}
             </div>
 
+            {/* Timeline */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Timeline
+                </label>
+                <div className="flex gap-sm">
+                    {[
+                        { label: '1m', days: 30 },
+                        { label: '3m', days: 90 },
+                        { label: '6m', days: 180 },
+                        { label: '1y', days: 365 },
+                        { label: '2y', days: 730 },
+                        { label: '4y', days: 1460 },
+                    ].map(preset => (
+                        <button
+                            key={preset.label}
+                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => onChange({ timeline: preset.days })}
+                            style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
+                        >
+                            {preset.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Deposit Amount & Exit Price - inline */}
             <div className="flex gap-md mb-md">
                 {/* Deposit Amount */}
@@ -186,50 +212,6 @@ export default function ScenarioPanel({
                 </div>
             </div>
 
-            {/* Timeline */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    Timeline
-                </label>
-                <div className="flex gap-sm">
-                    {[
-                        { label: '1m', days: 30 },
-                        { label: '3m', days: 90 },
-                        { label: '6m', days: 180 },
-                        { label: '1y', days: 365 },
-                        { label: '2y', days: 730 },
-                        { label: '4y', days: 1460 },
-                    ].map(preset => (
-                        <button
-                            key={preset.label}
-                            className={`btn ${scenario.timeline === preset.days ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => onChange({ timeline: preset.days })}
-                            style={{ flex: 1, padding: '4px 6px', fontSize: '0.75rem' }}
-                        >
-                            {preset.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Claim Strategy */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
-                    Claim Strategy
-                </label>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={scenario.osailStrategy}
-                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
-                />
-                <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
-                    <span>Redeem ({100 - scenario.osailStrategy}%)</span>
-                    <span>Lock ({scenario.osailStrategy}%)</span>
-                </div>
-            </div>
-
             {/* Price Range */}
             <div className="mb-md">
                 <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
@@ -273,26 +255,6 @@ export default function ScenarioPanel({
                         </div>
                     );
                 })()}
-
-                {/* Estimated APR Display */}
-                {rangeAPR && (
-                    <div
-                        className="flex justify-between items-center mb-sm"
-                        style={{
-                            padding: 'var(--space-xs) var(--space-sm)',
-                            background: 'rgba(var(--color-success-rgb), 0.1)',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '1px solid rgba(var(--color-success-rgb), 0.2)'
-                        }}
-                    >
-                        <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                            Estimated APR
-                        </span>
-                        <span className="text-success" style={{ fontWeight: 600 }}>
-                            {rangeAPR.estimatedAPR.toFixed(1)}%
-                        </span>
-                    </div>
-                )}
 
                 <div className="flex gap-sm">
                     <div style={{ width: '50%' }}>
@@ -356,6 +318,59 @@ export default function ScenarioPanel({
                 </div>
             </div>
 
+            {/* Claim Strategy - after Price Range */}
+            <div className="mb-md">
+                <label className="text-muted" style={{ fontSize: '0.875rem', display: 'block', marginBottom: 'var(--space-xs)' }}>
+                    Claim Strategy
+                </label>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={scenario.osailStrategy}
+                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
+                />
+                <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
+                    <span>Redeem ({100 - scenario.osailStrategy}%)</span>
+                    <span>Lock ({scenario.osailStrategy}%)</span>
+                </div>
+                {/* Lock incentive display */}
+                {results && (
+                    <div
+                        className="mt-sm"
+                        style={{
+                            padding: 'var(--space-xs) var(--space-sm)',
+                            background: scenario.osailStrategy > 50
+                                ? 'rgba(var(--color-success-rgb), 0.1)'
+                                : 'rgba(var(--text-muted-rgb), 0.05)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: scenario.osailStrategy > 50
+                                ? '1px solid rgba(var(--color-success-rgb), 0.2)'
+                                : '1px solid var(--border-subtle)',
+                            fontSize: '0.75rem',
+                            textAlign: 'center'
+                        }}
+                    >
+                        {(() => {
+                            // Calculate value at 100% lock vs current strategy
+                            const currentValue = results.osailValue;
+                            const maxLockValue = results.projectedOsail * 0.5; // SAIL price assumed $0.5
+                            const potentialGain = maxLockValue - currentValue;
+
+                            if (scenario.osailStrategy >= 100) {
+                                return <span className="text-success">✓ Maximum SAIL earnings at 100% lock</span>;
+                            } else if (potentialGain > 0) {
+                                return (
+                                    <span>
+                                        Lock more to earn <span className="text-success" style={{ fontWeight: 600 }}>+${potentialGain.toFixed(0)}</span> more SAIL
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
+                )}
+            </div>
 
 
 
