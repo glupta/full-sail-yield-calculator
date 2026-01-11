@@ -108,7 +108,9 @@ export default function ScenarioPanel({
                     Price Range
                     {pool?.currentPrice && (
                         <span style={{ float: 'right', color: 'var(--color-primary)' }}>
-                            Current: ${pool.currentPrice.toFixed(4)}
+                            Current: ${pool.currentPrice < 0.01
+                                ? pool.currentPrice.toFixed(6)
+                                : pool.currentPrice.toFixed(4)}
                         </span>
                     )}
                 </label>
@@ -117,8 +119,8 @@ export default function ScenarioPanel({
                         <input
                             type="number"
                             step="0.01"
-                            value={scenario.priceRangeLow}
-                            onChange={(e) => onChange({ priceRangeLow: Number(e.target.value) })}
+                            value={scenario.priceRangeLow ?? ''}
+                            onChange={(e) => onChange({ priceRangeLow: e.target.value === '' ? null : Number(e.target.value) })}
                             style={{ width: '100%' }}
                             placeholder="Low"
                         />
@@ -132,8 +134,8 @@ export default function ScenarioPanel({
                         <input
                             type="number"
                             step="0.01"
-                            value={scenario.priceRangeHigh}
-                            onChange={(e) => onChange({ priceRangeHigh: Number(e.target.value) })}
+                            value={scenario.priceRangeHigh ?? ''}
+                            onChange={(e) => onChange({ priceRangeHigh: e.target.value === '' ? null : Number(e.target.value) })}
                             style={{ width: '100%' }}
                             placeholder="High"
                         />
@@ -166,9 +168,9 @@ export default function ScenarioPanel({
                 />
                 <div className="flex gap-sm mt-sm">
                     {[
-                        { label: '30d', days: 30 },
-                        { label: '90d', days: 90 },
-                        { label: '180d', days: 180 },
+                        { label: '1m', days: 30 },
+                        { label: '3m', days: 90 },
+                        { label: '6m', days: 180 },
                         { label: '1y', days: 365 },
                         { label: '2y', days: 730 },
                         { label: '4y', days: 1460 },

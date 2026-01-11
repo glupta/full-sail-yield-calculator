@@ -82,24 +82,65 @@ export async function fetchGaugePools() {
     if (!sdk) return [];
 
     try {
+        // Fetch token prices from CoinGecko for fallback/validation
+        const { fetchTokenPrices, calculatePairPrice } = await import('./prices.js');
+        const tokenPrices = await fetchTokenPrices();
+
         // Fetch all pools in parallel
         const poolPromises = FULLSAIL_POOL_IDS.map(async ({ id, name }) => {
             try {
                 // Fetch backend data (APR, TVL, etc.)
                 const pool = await sdk.Pool.getById(id);
+                const [token0, token1] = name.split('/');
 
-                // Also fetch chain data for current price
+                // Calculate current price from tick index (primary method)
                 let currentPrice = null;
                 try {
                     const chainPool = await sdk.Pool.getByIdFromChain(id);
-                    if (chainPool?.currentSqrtPrice) {
-                        // Convert sqrtPrice to actual price
-                        // sqrtPrice is in Q64.64 format, need to square and adjust decimals
-                        const sqrtPrice = Number(chainPool.currentSqrtPrice) / (2 ** 64);
-                        currentPrice = sqrtPrice * sqrtPrice;
+                    if (chainPool?.currentTickIndex !== undefined) {
+                        // CLMM price formula: price = 1.0001^tick
+                        // This gives price as coinTypeA/coinTypeB (chain token order)
+                        const tick = Number(chainPool.currentTickIndex);
+                        let rawPrice = Math.pow(1.0001, tick);
+
+                        // Extract actual token symbols from chain pool
+                        const chainToken0 = chainPool.coinTypeA?.split('::').pop() || token0;
+                        const chainToken1 = chainPool.coinTypeB?.split('::').pop() || token1;
+
+                        // Known token decimals (USDC/USDT/SAIL have 6, most others have 9)
+                        const TOKEN_DECIMALS = {
+                            'USDC': 6, 'USDT': 6, 'SAIL': 6,
+                            'SUI': 9, 'WAL': 9, 'DEEP': 9, 'IKA': 9, 'UP': 9,
+                            'WBTC': 8, 'ETH': 8, 'stSUI': 9,
+                        };
+                        const decimals0 = TOKEN_DECIMALS[chainToken0] ?? 9;
+                        const decimals1 = TOKEN_DECIMALS[chainToken1] ?? 9;
+
+                        // Decimal adjustment factor: 10^(decimals0 - decimals1)
+                        const decimalAdjustment = Math.pow(10, decimals0 - decimals1);
+
+                        // rawPrice is token1/token0 in smallest units
+                        // Adjusted price = rawPrice * decimalAdjustment gives token1/token0 in human units
+                        const adjustedPrice = rawPrice * decimalAdjustment;
+
+                        // We want price of non-stable token in USD
+                        const isToken0Stable = chainToken0 === 'USDC' || chainToken0 === 'USDT';
+                        if (isToken0Stable) {
+                            // Chain order: STABLE/TOKEN, adjustedPrice = TOKEN/STABLE
+                            // Invert to get STABLE per TOKEN (USD price)
+                            currentPrice = 1 / adjustedPrice;
+                        } else {
+                            // Chain order: TOKEN/STABLE, adjustedPrice = STABLE/TOKEN already
+                            currentPrice = adjustedPrice;
+                        }
                     }
                 } catch (e) {
-                    console.warn(`Failed to fetch chain price for ${name}`);
+                    console.warn(`Failed to get tick price for ${name}`);
+                }
+
+                // Fallback to CoinGecko if tick price unavailable
+                if (!currentPrice) {
+                    currentPrice = calculatePairPrice(token0, token1, tokenPrices);
                 }
 
                 if (pool) {
@@ -107,8 +148,8 @@ export async function fetchGaugePools() {
                         ...pool,
                         id,
                         name: pool.name || name,
-                        token0_symbol: name.split('/')[0],
-                        token1_symbol: name.split('/')[1],
+                        token0_symbol: token0,
+                        token1_symbol: token1,
                         gauge_id: pool.gauge_id || true,
                         currentPrice,
                     };

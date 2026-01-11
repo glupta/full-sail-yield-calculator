@@ -63,7 +63,10 @@ export default function PoolSelector({ selectedPool, onSelect }) {
                     >
                         {sortedPools.map(pool => (
                             <option key={pool.id} value={pool.id}>
-                                {pool.token0_symbol}/{pool.token1_symbol} ({formatTVL(pool.dinamic_stats?.tvl)})
+                                {pool.token0_symbol}/{pool.token1_symbol} (
+                                {filter === 'apr'
+                                    ? `${pool.full_apr?.toFixed(1) || 0}%`
+                                    : formatTVL(pool.dinamic_stats?.tvl)})
                             </option>
                         ))}
                     </select>
