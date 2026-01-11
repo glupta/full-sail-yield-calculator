@@ -124,11 +124,11 @@ export default function LPCalculator() {
                         </div>
                         <div className="stat-item text-center">
                             <div className="stat-label">SAIL Earned</div>
-                            <div className="stat-value text-success">{formatUsd(totals.totalOsailValue)}</div>
+                            <div className="stat-value text-success">+{formatUsd(totals.totalOsailValue)}</div>
                         </div>
                         <div className="stat-item text-center">
                             <div className="stat-label">External Rewards</div>
-                            <div className="stat-value text-success">{formatUsd(totals.totalExternalRewards)}</div>
+                            <div className="stat-value text-success">+{formatUsd(totals.totalExternalRewards)}</div>
                         </div>
                         <div className="stat-item text-center">
                             <div className="stat-label">Est. IL</div>
