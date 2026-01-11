@@ -175,10 +175,13 @@ export default function ScenarioPanel({
                     style={{ width: '100%' }}
                     placeholder="Exit price"
                 />
-                {pool?.currentPrice && scenario.exitPrice > 0 && (
+                {pool?.currentPrice && (
                     <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                        {scenario.exitPrice > pool.currentPrice ? '+' : ''}
-                        {((scenario.exitPrice / pool.currentPrice - 1) * 100).toFixed(1)}% price change
+                        {(() => {
+                            const exitPrice = scenario.exitPrice ?? pool.currentPrice;
+                            const change = ((exitPrice / pool.currentPrice - 1) * 100);
+                            return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% price change`;
+                        })()}
                     </div>
                 )}
             </div>
