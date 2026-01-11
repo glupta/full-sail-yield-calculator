@@ -8,6 +8,52 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { fetchGaugePools, fetchPool, getSDK } from './sdk';
 
+describe('SDK Pool.getList API', () => {
+    it('should fetch all pools using sdk.Pool.getList with page: 0', async () => {
+        const sdk = await getSDK();
+        expect(sdk).toBeDefined();
+
+        const result = await sdk.Pool.getList({
+            pagination: { page: 0, page_size: 100 }
+        });
+
+        console.log('Pool.getList result:', {
+            poolsReturned: result.pools?.length,
+            totalPools: result.pagination?.total,
+        });
+
+        expect(result.pools).toBeDefined();
+        expect(result.pools.length).toBeGreaterThan(0);
+        expect(result.pools.length).toBe(result.pagination.total);
+
+        // Verify pool structure
+        const firstPool = result.pools[0];
+        expect(firstPool.address).toBeDefined();
+        expect(firstPool.name).toBeDefined();
+        expect(firstPool.dinamic_stats).toBeDefined();
+        expect(firstPool.token_a).toBeDefined();
+        expect(firstPool.token_b).toBeDefined();
+
+        console.log('First pool:', {
+            address: firstPool.address.slice(0, 20) + '...',
+            name: firstPool.name,
+            tvl: firstPool.dinamic_stats?.tvl,
+            apr: firstPool.dinamic_stats?.apr,
+        });
+    }, 15000);
+
+    it('should return 0 pools with page: 1 (0-indexed, so page 1 is empty)', async () => {
+        const sdk = await getSDK();
+        const result = await sdk.Pool.getList({
+            pagination: { page: 1, page_size: 100 }
+        });
+
+        // page: 1 with 100 per page should return 0 if total is <= 100
+        console.log('Page 1 result:', result.pools?.length, 'of', result.pagination?.total);
+        expect(result.pools.length).toBe(0);
+    }, 10000);
+});
+
 describe('SDK Pool Data Inspection', () => {
     let pools;
     let suiPool;

@@ -59,22 +59,8 @@ export async function fetchPoolFromChain(poolId) {
     }
 }
 
-// Full Sail gauge-enabled pool IDs (from app.fullsail.finance)
-const FULLSAIL_POOL_IDS = [
-    { id: '0x038eca6cc3ba17b84829ea28abac7238238364e0787ad714ac35c1140561a6b9', name: 'SAIL/USDC' },
-    { id: '0x7fc2f2f3807c6e19f0d418d1aaad89e6f0e866b5e4ea10b295ca0b686b6c4980', name: 'SUI/USDC' },
-    { id: '0xa7aa7807a87a771206571d3dd40e53ccbc395d7024def57b49ed9200b5b7e4e5', name: 'IKA/SUI' },
-    { id: '0xf4c75d0609a2a53df0c896cfee52a33e6f11d1a70ab113ad83d89b1bfdfe002d', name: 'WBTC/USDC' },
-    { id: '0x90ad474a2b0e4512e953dbe9805eb233ffe5659b93b4bb71ce56bd4110b38c91', name: 'ETH/USDC' },
-    { id: '0xd1fd1d6fd6bed8c901ca483e2739ff3aa2e3cb3ef67cb2a7414b147a32adbdb0', name: 'stSUI/WAL' },
-    { id: '0x6659a37fcd210fab78d1efd890fd4ca790bb260136f7934193e4607d82598b4d', name: 'stSUI/DEEP' },
-    { id: '0x20e2f4d32c633be7eac9cba3b2d18b8ae188c0b639f3028915afe2af7ed7c89f', name: 'WAL/SUI' },
-    { id: '0xd0dd3d7ae05c22c80e1e16639fb0d4334372a8a45a8f01c85dac662cc8850b60', name: 'DEEP/SUI' },
-    { id: '0xdd212407908182e6c2c908e2749b49550f853bc52306d6849059dd3f72d0a7e3', name: 'UP/SUI' },
-];
-
 /**
- * Fetch all gauge-enabled pools
+ * Fetch all Full Sail pools using sdk.Pool.getList()
  * @returns {Promise<object[]>}
  */
 export async function fetchGaugePools() {
@@ -82,87 +68,75 @@ export async function fetchGaugePools() {
     if (!sdk) return [];
 
     try {
+        // Fetch all pools from the Full Sail API (pagination is 0-indexed)
+        const result = await sdk.Pool.getList({
+            pagination: { page: 0, page_size: 100 }
+        });
+
+        if (!result?.pools?.length) {
+            console.warn('No pools returned from sdk.Pool.getList()');
+            return [];
+        }
+
         // Fetch token prices from CoinGecko for fallback/validation
         const { fetchTokenPrices, calculatePairPrice } = await import('./prices.js');
         const tokenPrices = await fetchTokenPrices();
 
-        // Fetch all pools in parallel
-        const poolPromises = FULLSAIL_POOL_IDS.map(async ({ id, name }) => {
+        // Process and enrich pool data
+        const enrichedPools = await Promise.all(result.pools.map(async (pool) => {
             try {
-                // Fetch backend data (APR, TVL, etc.)
-                const pool = await sdk.Pool.getById(id);
-                const [token0, token1] = name.split('/');
+                const id = pool.address;
+                const name = pool.name;
 
-                // Calculate current price from tick index (primary method)
+                // Extract token symbols from token_a/token_b or parse from name
+                const token0_symbol = pool.token_a?.address?.split('::').pop() || name.split('/')[0];
+                const token1_symbol = pool.token_b?.address?.split('::').pop() || name.split('/')[1];
+
+                // Calculate current price from current_sqrt_price (primary method)
                 let currentPrice = null;
                 try {
-                    const chainPool = await sdk.Pool.getByIdFromChain(id);
-                    if (chainPool?.currentTickIndex !== undefined) {
-                        // CLMM price formula: price = 1.0001^tick
-                        // This gives price as coinTypeA/coinTypeB (chain token order)
-                        const tick = Number(chainPool.currentTickIndex);
-                        let rawPrice = Math.pow(1.0001, tick);
+                    if (pool.current_sqrt_price) {
+                        // Convert sqrtPrice to price: price = (sqrtPrice / 2^64)^2
+                        const sqrtPrice = BigInt(pool.current_sqrt_price);
+                        const Q64 = BigInt(2 ** 64);
+                        const priceRatio = Number(sqrtPrice) / Number(Q64);
+                        const rawPrice = priceRatio * priceRatio;
 
-                        // Extract actual token symbols from chain pool
-                        const chainToken0 = chainPool.coinTypeA?.split('::').pop() || token0;
-                        const chainToken1 = chainPool.coinTypeB?.split('::').pop() || token1;
-
-                        // Known token decimals (USDC/USDT/SAIL have 6, most others have 9)
-                        const TOKEN_DECIMALS = {
-                            'USDC': 6, 'USDT': 6, 'SAIL': 6,
-                            'SUI': 9, 'WAL': 9, 'DEEP': 9, 'IKA': 9, 'UP': 9,
-                            'WBTC': 8, 'ETH': 8, 'stSUI': 9,
-                        };
-                        const decimals0 = TOKEN_DECIMALS[chainToken0] ?? 9;
-                        const decimals1 = TOKEN_DECIMALS[chainToken1] ?? 9;
-
-                        // Decimal adjustment factor: 10^(decimals0 - decimals1)
+                        // Get decimals from token_a and token_b
+                        const decimals0 = pool.token_a?.decimals ?? 9;
+                        const decimals1 = pool.token_b?.decimals ?? 9;
                         const decimalAdjustment = Math.pow(10, decimals0 - decimals1);
-
-                        // rawPrice is token1/token0 in smallest units
-                        // Adjusted price = rawPrice * decimalAdjustment gives token1/token0 in human units
                         const adjustedPrice = rawPrice * decimalAdjustment;
 
-                        // We want price of non-stable token in USD
-                        const isToken0Stable = chainToken0 === 'USDC' || chainToken0 === 'USDT';
-                        if (isToken0Stable) {
-                            // Chain order: STABLE/TOKEN, adjustedPrice = TOKEN/STABLE
-                            // Invert to get STABLE per TOKEN (USD price)
-                            currentPrice = 1 / adjustedPrice;
-                        } else {
-                            // Chain order: TOKEN/STABLE, adjustedPrice = STABLE/TOKEN already
-                            currentPrice = adjustedPrice;
-                        }
+                        // Determine price direction (we want USD price of non-stable)
+                        const isToken0Stable = token0_symbol === 'USDC' || token0_symbol === 'USDT';
+                        currentPrice = isToken0Stable ? (1 / adjustedPrice) : adjustedPrice;
                     }
                 } catch (e) {
-                    console.warn(`Failed to get tick price for ${name}`);
+                    console.warn(`Failed to calculate price for ${name}:`, e.message);
                 }
 
-                // Fallback to CoinGecko if tick price unavailable
+                // Fallback to CoinGecko if sqrtPrice calculation unavailable
                 if (!currentPrice) {
-                    currentPrice = calculatePairPrice(token0, token1, tokenPrices);
+                    currentPrice = calculatePairPrice(token0_symbol, token1_symbol, tokenPrices);
                 }
 
-                if (pool) {
-                    return {
-                        ...pool,
-                        id,
-                        name: pool.name || name,
-                        token0_symbol: token0,
-                        token1_symbol: token1,
-                        gauge_id: pool.gauge_id || true,
-                        currentPrice,
-                    };
-                }
-                return null;
+                return {
+                    ...pool,
+                    id,
+                    name,
+                    token0_symbol,
+                    token1_symbol,
+                    gauge_id: pool.gauge_id || null,
+                    currentPrice,
+                };
             } catch (e) {
-                console.warn(`Failed to fetch pool ${name}:`, e.message);
+                console.warn(`Failed to process pool ${pool.name}:`, e.message);
                 return null;
             }
-        });
+        }));
 
-        const pools = await Promise.all(poolPromises);
-        return pools.filter(Boolean);
+        return enrichedPools.filter(Boolean);
     } catch (e) {
         console.error('Failed to fetch pools:', e);
         return [];
