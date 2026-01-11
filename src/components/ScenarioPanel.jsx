@@ -12,8 +12,9 @@ export default function ScenarioPanel({
     onRemove,
     isWinner
 }) {
-    // Collapse state for results detail
-    const [isResultsExpanded, setIsResultsExpanded] = useState(true);
+    // Collapse state for results sections
+    const [isSailExpanded, setIsSailExpanded] = useState(false);
+    const [isExternalExpanded, setIsExternalExpanded] = useState(false);
 
     // Use pool from scenario
     const pool = scenario.pool;
@@ -257,147 +258,104 @@ export default function ScenarioPanel({
                     paddingTop: 'var(--space-md)',
                     borderTop: '1px solid var(--border-subtle)'
                 }}>
-                    {/* Collapsible Header */}
-                    <div
-                        className="flex justify-between items-center mb-md"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => setIsResultsExpanded(!isResultsExpanded)}
-                    >
-                        <h4 style={{ margin: 0 }}>Results</h4>
-                        <button
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: 'var(--text-muted)',
-                                padding: '4px',
-                                display: 'flex',
-                                alignItems: 'center'
-                            }}
-                            aria-label={isResultsExpanded ? 'Collapse results' : 'Expand results'}
+                    <h4 className="mb-md">Results</h4>
+                    <div style={{ fontSize: '0.9rem' }}>
+                        {/* SAIL Earned - Collapsible */}
+                        <div
+                            className="flex justify-between items-center"
+                            style={{ padding: 'var(--space-xs) 0', cursor: 'pointer' }}
+                            onClick={() => setIsSailExpanded(!isSailExpanded)}
                         >
-                            {isResultsExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        </button>
-                    </div>
-
-                    {/* Net Yield - Always Visible */}
-                    <div
-                        className="flex justify-between"
-                        style={{
-                            fontWeight: 600,
-                            fontSize: '1.1rem',
-                            marginBottom: isResultsExpanded ? 'var(--space-md)' : 0,
-                            paddingBottom: isResultsExpanded ? 'var(--space-sm)' : 0,
-                            borderBottom: isResultsExpanded ? '1px solid var(--border-subtle)' : 'none'
-                        }}
-                    >
-                        <span>Net Yield</span>
-                        <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
-                            {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
-                            <span style={{ marginLeft: '6px', fontSize: '0.85rem', opacity: 0.9 }}>
-                                ({results.netAPR?.toFixed(1) || ((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}% APR)
-                            </span>
-                            {isWinner && ' ✓'}
-                        </span>
-                    </div>
-
-                    {/* Expandable Details - 2 Column Layout */}
-                    {isResultsExpanded && (
-                        <div style={{ fontSize: '0.9rem' }}>
-                            {/* Column Headers */}
-                            <div className="flex justify-between text-muted" style={{
-                                fontSize: '0.75rem',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.5px',
-                                marginBottom: 'var(--space-xs)',
-                                paddingBottom: 'var(--space-xs)',
-                                borderBottom: '1px solid var(--border-subtle)'
-                            }}>
-                                <span></span>
-                                <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                    <span style={{ width: '80px', textAlign: 'right' }}>Amount</span>
-                                    <span style={{ width: '65px', textAlign: 'right' }}>APR</span>
-                                </div>
-                            </div>
-
-                            {/* SAIL Earned */}
-                            <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
+                            <span className="flex items-center gap-sm">
                                 <span className="text-muted">SAIL Earned</span>
-                                <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                    <span style={{ width: '80px', textAlign: 'right' }}>{formatOsail(results.projectedOsail)}</span>
-                                    <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{results.sailAPR?.toFixed(1)}%</span>
-                                </div>
-                            </div>
+                                {isSailExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
+                            </span>
+                            <span className="text-success">{formatUsd(results.osailValue)}</span>
+                        </div>
 
-                            {/* Yield Breakdown by Type */}
+                        {/* SAIL Breakdown - Collapsible */}
+                        {isSailExpanded && (
                             <div style={{
                                 marginLeft: 'var(--space-md)',
                                 paddingLeft: 'var(--space-md)',
-                                borderLeft: '2px solid var(--border-subtle)'
+                                borderLeft: '2px solid var(--border-subtle)',
+                                marginBottom: 'var(--space-xs)'
                             }}>
-                                <div className="flex justify-between text-muted" style={{ padding: 'var(--space-xs) 0' }}>
+                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
+                                    <span>Tokens: {formatOsail(results.projectedOsail)}</span>
+                                </div>
+                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
                                     <span>→ Redeemed (liquid)</span>
-                                    <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                        <span className="text-success" style={{ width: '80px', textAlign: 'right' }}>{formatUsd(results.redeemValue)}</span>
-                                        <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{results.redeemAPR?.toFixed(1)}%</span>
-                                    </div>
+                                    <span className="text-success">{formatUsd(results.redeemValue)}</span>
                                 </div>
-                                <div className="flex justify-between text-muted" style={{ padding: 'var(--space-xs) 0' }}>
+                                <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
                                     <span>→ Locked (veSAIL)</span>
-                                    <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                        <span className="text-success" style={{ width: '80px', textAlign: 'right' }}>{formatUsd(results.lockValue)}</span>
-                                        <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{results.lockAPR?.toFixed(1)}%</span>
-                                    </div>
+                                    <span className="text-success">{formatUsd(results.lockValue)}</span>
                                 </div>
                             </div>
+                        )}
 
-                            {/* Total SAIL Value */}
-                            <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
-                                <span className="text-muted">Total SAIL Value</span>
-                                <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                    <span className="text-success" style={{ width: '80px', textAlign: 'right' }}>{formatUsd(results.osailValue)}</span>
-                                    <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{results.sailAPR?.toFixed(1)}%</span>
-                                </div>
-                            </div>
-
-                            {/* External Rewards */}
-                            {results.externalRewards && results.externalRewards.length > 0 && (
-                                <>
-                                    <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
+                        {/* External Rewards - Collapsible */}
+                        {results.externalRewards && results.externalRewards.length > 0 && (
+                            <>
+                                <div
+                                    className="flex justify-between items-center"
+                                    style={{ padding: 'var(--space-xs) 0', cursor: 'pointer' }}
+                                    onClick={() => setIsExternalExpanded(!isExternalExpanded)}
+                                >
+                                    <span className="flex items-center gap-sm">
                                         <span className="text-muted">External Rewards</span>
-                                        <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                            <span className="text-success" style={{ width: '80px', textAlign: 'right' }}>{formatUsd(results.externalRewardsValue)}</span>
-                                            <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{(results.externalRewardsAPR || results.externalRewards.reduce((sum, r) => sum + r.apr, 0)).toFixed(1)}%</span>
-                                        </div>
-                                    </div>
+                                        {isExternalExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
+                                    </span>
+                                    <span className="text-success">{formatUsd(results.externalRewardsValue)}</span>
+                                </div>
+
+                                {/* External Breakdown */}
+                                {isExternalExpanded && (
                                     <div style={{
                                         marginLeft: 'var(--space-md)',
                                         paddingLeft: 'var(--space-md)',
-                                        borderLeft: '2px solid var(--border-subtle)'
+                                        borderLeft: '2px solid var(--border-subtle)',
+                                        marginBottom: 'var(--space-xs)'
                                     }}>
                                         {results.externalRewards.map((reward, idx) => (
-                                            <div key={idx} className="flex justify-between text-muted" style={{ padding: 'var(--space-xs) 0' }}>
-                                                <span>→ {reward.token}</span>
-                                                <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                                    <span className="text-success" style={{ width: '80px', textAlign: 'right' }}>{formatUsd(reward.projectedValue)}</span>
-                                                    <span className="text-success" style={{ width: '65px', textAlign: 'right' }}>{reward.apr.toFixed(1)}%</span>
-                                                </div>
+                                            <div key={idx} className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.85rem' }}>
+                                                <span>→ {reward.token} ({reward.apr.toFixed(1)}% APR)</span>
+                                                <span className="text-success">{formatUsd(reward.projectedValue)}</span>
                                             </div>
                                         ))}
                                     </div>
-                                </>
-                            )}
+                                )}
+                            </>
+                        )}
 
-                            {/* IL */}
-                            <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
-                                <span className="text-muted">Impermanent Loss</span>
-                                <div className="flex" style={{ gap: 'var(--space-lg)' }}>
-                                    <span className="text-error" style={{ width: '80px', textAlign: 'right' }}>-{formatUsd(results.ilDollar)}</span>
-                                    <span className="text-error" style={{ width: '65px', textAlign: 'right' }}>{(Math.abs(results.ilPercent) * 100).toFixed(1)}%</span>
-                                </div>
-                            </div>
+                        {/* IL */}
+                        <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
+                            <span className="text-muted">Impermanent Loss</span>
+                            <span className="text-error">-{formatUsd(results.ilDollar)} ({(Math.abs(results.ilPercent) * 100).toFixed(1)}%)</span>
                         </div>
-                    )}
+
+                        {/* Net Yield - At Bottom */}
+                        <div
+                            className="flex justify-between"
+                            style={{
+                                fontWeight: 600,
+                                fontSize: '1.1rem',
+                                marginTop: 'var(--space-sm)',
+                                paddingTop: 'var(--space-sm)',
+                                borderTop: '1px solid var(--border-subtle)'
+                            }}
+                        >
+                            <span>Net Yield</span>
+                            <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
+                                {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
+                                <span style={{ marginLeft: '6px', fontSize: '0.85rem', opacity: 0.9 }}>
+                                    ({((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}% APR)
+                                </span>
+                                {isWinner && ' ✓'}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
