@@ -106,7 +106,12 @@ export default function TokenBuyerCalculator() {
 
     const votingPowerRatio = veSailAmount / inputs.sailAmount;
 
+    // Time to recoup principal (in days)
+    const dailyReward = sailValue * votingRewardAPR / 365;
+    const timeToRecoup = dailyReward > 0 ? sailValue / dailyReward : Infinity;
+
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatSailPrice = (val) => `$${val.toFixed(6)}`; // 6 decimals for small prices
     const formatPercent = (val) => `${(val * 100).toFixed(2)}%`;
 
     return (
@@ -127,7 +132,7 @@ export default function TokenBuyerCalculator() {
                         style={{ width: '100%' }}
                     />
                     <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                        Value: {formatUsd(sailValue)} @ {formatUsd(sailPrice)}/SAIL
+                        Value: {formatUsd(sailValue)} @ {formatSailPrice(sailPrice)}/SAIL
                     </div>
                 </div>
 
@@ -239,6 +244,14 @@ export default function TokenBuyerCalculator() {
                         <div className="flex justify-between">
                             <span className="text-muted">Period Return</span>
                             <span className="text-primary-color">{sailValue > 0 ? formatPercent(projectedRewards / sailValue) : '0%'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted">Time to Recoup Principal</span>
+                            <span className="text-primary-color">
+                                {timeToRecoup === Infinity ? '∞' :
+                                    timeToRecoup < 365 ? `${Math.round(timeToRecoup)} days` :
+                                        `${(timeToRecoup / 365).toFixed(1)} years`}
+                            </span>
                         </div>
                     </div>
                     <div className="text-muted mt-md" style={{ fontSize: '0.75rem' }}>

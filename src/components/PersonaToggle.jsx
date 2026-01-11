@@ -10,14 +10,14 @@ export default function PersonaToggle({ persona, onChange }) {
                 onClick={() => onChange('lp')}
                 aria-pressed={persona === 'lp'}
             >
-                LP Yields
+                Liquidity
             </button>
             <button
                 className={`tab ${persona === 'buyer' ? 'active' : ''}`}
                 onClick={() => onChange('buyer')}
                 aria-pressed={persona === 'buyer'}
             >
-                Token Buyer
+                SAIL
             </button>
         </div>
     );
