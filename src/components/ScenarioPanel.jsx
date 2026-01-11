@@ -293,18 +293,42 @@ export default function ScenarioPanel({
                 }}>
                     <h4 className="mb-md">Results</h4>
                     <div className="flex flex-col gap-sm">
+                        {/* SAIL Emissions Total */}
                         <div className="flex justify-between">
-                            <span className="text-muted">SAIL Emissions</span>
+                            <span className="text-muted">SAIL Earned</span>
                             <span>{formatOsail(results.projectedOsail)}</span>
                         </div>
+
+                        {/* Yield Breakdown by Type */}
+                        <div style={{
+                            marginLeft: 'var(--space-md)',
+                            paddingLeft: 'var(--space-md)',
+                            borderLeft: '2px solid var(--border-subtle)',
+                            fontSize: '0.9rem'
+                        }}>
+                            <div className="flex justify-between text-muted">
+                                <span>→ Redeemed (liquid)</span>
+                                <span className="text-success">{formatUsd(results.redeemValue)}</span>
+                            </div>
+                            <div className="flex justify-between text-muted">
+                                <span>→ Locked (veSAIL)</span>
+                                <span className="text-success">{formatUsd(results.lockValue)}</span>
+                            </div>
+                        </div>
+
+                        {/* Total SAIL Value */}
                         <div className="flex justify-between">
-                            <span className="text-muted">SAIL Value</span>
+                            <span className="text-muted">Total SAIL Value</span>
                             <span className="text-success">{formatUsd(results.osailValue)}</span>
                         </div>
+
+                        {/* IL */}
                         <div className="flex justify-between">
-                            <span className="text-muted">IL Estimate</span>
-                            <span className="text-error">-{formatUsd(results.ilDollar)}</span>
+                            <span className="text-muted">Impermanent Loss</span>
+                            <span className="text-error">-{formatUsd(results.ilDollar)} ({(Math.abs(results.ilPercent) * 100).toFixed(1)}%)</span>
                         </div>
+
+                        {/* Net Yield */}
                         <div
                             className="flex justify-between"
                             style={{
@@ -316,7 +340,7 @@ export default function ScenarioPanel({
                         >
                             <span>Net Yield</span>
                             <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
-                                {results.netYield >= 0 ? '' : '-'}{formatUsd(Math.abs(results.netYield))}
+                                {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
                                 {isWinner && ' ✓'}
                             </span>
                         </div>
