@@ -9,9 +9,9 @@ The Full Sail Yield Calculator is a web-based tool that enables users to project
 ## Problem Statement
 
 Full Sail's ve(4,4) mechanism offers complex yield opportunities:
-- LPs earn trading fees + oSAIL emissions
-- oSAIL can be locked (2x value) or redeemed (50%)
-- veSAIL holders earn voting rewards + rebase
+- LPs earn oSAIL emissions (not trading fees)
+- oSAIL can be locked (1:1 SAIL value) or redeemed (50%)
+- veSAIL holders earn trading fees + rebase from voting
 
 Users currently lack tools to model these tradeoffs and project returns.
 
@@ -51,7 +51,7 @@ Users currently lack tools to model these tradeoffs and project returns.
 
 ### F2: LP Yield Projection
 - **Inputs**: Deposit amount, price range (±%), timeline, volatility override
-- **Outputs**: Fee yield, oSAIL emissions, IL estimate, net yield
+- **Outputs**: oSAIL emissions, IL estimate, net yield (oSAIL value - IL)
 - **Visualization**: Stacked bar chart of yield components
 
 ### F3: oSAIL Strategy Slider

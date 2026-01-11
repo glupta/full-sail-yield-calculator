@@ -31,14 +31,13 @@ The calculator uses the `@fullsailfinance/sdk` to fetch real-time pool data, pos
 #### 1.2 Outputs
 | Metric | Description |
 |--------|-------------|
-| **Fee APR** | `dinamic_stats.apr` from pool |
-| **SAIL Emission APR** | From `distributed_osail_24h` + rewards |
-| **Total APR** | `full_apr` = fee APR + emission APRs |
-| **Projected Fee Yield** | Fees earned over timeline |
-| **Projected oSAIL Emissions** | oSAIL tokens earned |
+| **oSAIL Emission APR** | From `distributed_osail_24h` + pool rewards |
+| **Projected oSAIL Emissions** | oSAIL tokens earned over timeline |
 | **Impermanent Loss Estimate** | Using Uniswap v3 IL formula |
-| **Net Yield** | Fee yield + oSAIL value - IL |
-| **oSAIL Strategy Value** | Lock portion (2x) + Redeem portion (50%) |
+| **Net Yield** | oSAIL value - IL |
+| **oSAIL Strategy Value** | Lock portion (1:1 SAIL) + Redeem portion (50%) |
+
+> **Note**: In ve(4,4), LPs earn **oSAIL emissions only**. Trading fees go to veSAIL voters.
 
 #### 1.3 IL Modeling
 - **Formula**: Uniswap v3 concentrated liquidity IL
