@@ -271,7 +271,7 @@ export default function ScenarioPanel({
                                 {isSailExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                             </span>
                             <span className="text-success">
-                                {formatUsd(results.osailValue)} ({results.sailAPR?.toFixed(1) || '0.0'}%)
+                                +{formatUsd(results.osailValue)} ({results.sailAPR?.toFixed(1) || '0.0'}%)
                             </span>
                         </div>
 
@@ -285,11 +285,11 @@ export default function ScenarioPanel({
                             }}>
                                 <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Redeemed (liquid)</span>
-                                    <span className="text-success">{formatUsd(results.redeemValue)} ({results.redeemAPR?.toFixed(1) || '0.0'}%)</span>
+                                    <span className="text-success">+{formatUsd(results.redeemValue)} ({results.redeemAPR?.toFixed(1) || '0.0'}%)</span>
                                 </div>
                                 <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Locked (veSAIL)</span>
-                                    <span className="text-success">{formatUsd(results.lockValue)} ({results.lockAPR?.toFixed(1) || '0.0'}%)</span>
+                                    <span className="text-success">+{formatUsd(results.lockValue)} ({results.lockAPR?.toFixed(1) || '0.0'}%)</span>
                                 </div>
                             </div>
                         )}
@@ -307,7 +307,7 @@ export default function ScenarioPanel({
                                         {isExternalExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                                     </span>
                                     <span className="text-success">
-                                        {formatUsd(results.externalRewardsValue)} ({results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%)
+                                        +{formatUsd(results.externalRewardsValue)} ({results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%)
                                     </span>
                                 </div>
 
@@ -322,7 +322,7 @@ export default function ScenarioPanel({
                                         {results.externalRewards.map((reward, idx) => (
                                             <div key={idx} className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                                 <span>→ {reward.token}</span>
-                                                <span className="text-success">{formatUsd(reward.projectedValue)} ({reward.apr.toFixed(1)}%)</span>
+                                                <span className="text-success">+{formatUsd(reward.projectedValue)} ({reward.apr.toFixed(1)}%)</span>
                                             </div>
                                         ))}
                                     </div>
