@@ -140,6 +140,12 @@ export default function LPCalculator() {
                                 {totals.totalNetYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
                             </div>
                         </div>
+                        <div className="stat-item text-center">
+                            <div className="stat-label">Final Value</div>
+                            <div className="stat-value" style={{ color: 'var(--color-primary)' }}>
+                                {formatUsd(totals.totalDeposit + totals.totalNetYield)}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
