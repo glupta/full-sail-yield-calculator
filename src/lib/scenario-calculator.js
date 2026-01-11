@@ -11,6 +11,38 @@ const SAIL_PRICE = 0.5;
 const DEFAULT_VOLATILITY = 0.8;
 
 /**
+ * Calculate external rewards (SUI incentives, etc.) from pool.rewards array
+ * @param {object[]} rewards - Array of reward objects with { token, apr, ... }
+ * @param {number} depositAmount - User's deposit in USD
+ * @param {number} timeline - Timeline in days
+ * @returns {object} - External rewards breakdown
+ */
+function calculateExternalRewards(rewards, depositAmount, timeline) {
+    if (!rewards || !Array.isArray(rewards) || rewards.length === 0) {
+        return { externalRewards: [], externalRewardsValue: 0 };
+    }
+
+    const externalRewards = rewards
+        .filter(r => r.token && r.apr) // Filter valid rewards
+        .map(reward => {
+            // APR is in percentage (e.g., 50 = 50%)
+            const apr = reward.apr || 0;
+            const dailyRate = apr / 100 / 365;
+            const projectedValue = depositAmount * dailyRate * timeline;
+
+            return {
+                token: reward.token?.split('::').pop() || 'Unknown',
+                apr: apr,
+                projectedValue,
+            };
+        });
+
+    const externalRewardsValue = externalRewards.reduce((sum, r) => sum + r.projectedValue, 0);
+
+    return { externalRewards, externalRewardsValue };
+}
+
+/**
  * Calculate results for a single scenario
  * @param {object} scenario - Scenario with pool, depositAmount, timeline, osailStrategy, exitPrice
  * @returns {object|null} - Calculated results or null if no pool
@@ -35,6 +67,13 @@ export function calculateScenarioResults(scenario) {
     const lockPct = scenario.osailStrategy / 100;
     const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
 
+    // Calculate external rewards (SUI incentives, etc.)
+    const { externalRewards, externalRewardsValue } = calculateExternalRewards(
+        pool.rewards,
+        scenario.depositAmount,
+        scenario.timeline
+    );
+
     // Calculate IL - use exit price if provided, otherwise estimate from volatility
     let ilPercent;
     const currentPrice = pool.currentPrice;
@@ -51,14 +90,16 @@ export function calculateScenarioResults(scenario) {
 
     const ilDollar = calculateILDollarValue(scenario.depositAmount, ilPercent);
 
-    // Net yield
-    const netYield = strategyValue.totalValue - ilDollar;
+    // Net yield = SAIL value + external rewards - IL
+    const netYield = strategyValue.totalValue + externalRewardsValue - ilDollar;
 
     return {
         projectedOsail,
         osailValue: strategyValue.totalValue,
         lockValue: strategyValue.lockValue,
         redeemValue: strategyValue.redeemValue,
+        externalRewards,
+        externalRewardsValue,
         ilPercent,
         ilDollar,
         netYield,

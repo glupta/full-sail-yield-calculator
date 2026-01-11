@@ -322,6 +322,29 @@ export default function ScenarioPanel({
                             <span className="text-success">{formatUsd(results.osailValue)}</span>
                         </div>
 
+                        {/* External Rewards (SUI incentives, etc.) */}
+                        {results.externalRewards && results.externalRewards.length > 0 && (
+                            <>
+                                <div className="flex justify-between">
+                                    <span className="text-muted">External Rewards</span>
+                                    <span className="text-success">{formatUsd(results.externalRewardsValue)}</span>
+                                </div>
+                                <div style={{
+                                    marginLeft: 'var(--space-md)',
+                                    paddingLeft: 'var(--space-md)',
+                                    borderLeft: '2px solid var(--border-subtle)',
+                                    fontSize: '0.9rem'
+                                }}>
+                                    {results.externalRewards.map((reward, idx) => (
+                                        <div key={idx} className="flex justify-between text-muted">
+                                            <span>→ {reward.token} ({reward.apr.toFixed(1)}% APR)</span>
+                                            <span className="text-success">{formatUsd(reward.projectedValue)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
                         {/* IL */}
                         <div className="flex justify-between">
                             <span className="text-muted">Impermanent Loss</span>
