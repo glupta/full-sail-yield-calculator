@@ -45,17 +45,19 @@ describe('roundToSigFigs', () => {
 });
 
 describe('formatUsd', () => {
-    it('should format positive values with $ prefix', () => {
+    it('should format positive values with $ prefix and commas', () => {
         expect(formatUsd(100)).toBe('$100.00');
-        expect(formatUsd(1234.56)).toBe('$1234.56');
+        expect(formatUsd(1234.56)).toBe('$1,234.56');
+        expect(formatUsd(1000000)).toBe('$1,000,000.00');
     });
 
     it('should format zero as $0.00', () => {
         expect(formatUsd(0)).toBe('$0.00');
     });
 
-    it('should format negative values', () => {
+    it('should format negative values with commas', () => {
         expect(formatUsd(-50)).toBe('$-50.00');
+        expect(formatUsd(-1234.56)).toBe('$-1,234.56');
     });
 
     it('should handle decimal values', () => {

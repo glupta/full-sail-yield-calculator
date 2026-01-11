@@ -16,13 +16,13 @@ export function roundToSigFigs(num, sigFigs = 4) {
 }
 
 /**
- * Format a number as USD currency
+ * Format a number as USD currency with commas
  * @param {number} val - Value to format
- * @returns {string} - Formatted USD string
+ * @returns {string} - Formatted USD string with commas
  */
 export function formatUsd(val) {
     if (!Number.isFinite(val)) return '$0.00';
-    return `$${val.toFixed(2)}`;
+    return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**
