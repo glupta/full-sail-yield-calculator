@@ -117,14 +117,18 @@ export default function LPCalculator() {
             {totals.scenarioCount > 0 && (
                 <div className="summary-card mb-lg">
                     <h4 className="mb-md" style={{ color: 'var(--color-primary)', fontSize: '0.9rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Summary</h4>
-                    <div className="flex justify-around items-center" style={{ gap: 'var(--space-lg)' }}>
+                    <div className="flex justify-around items-center" style={{ gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
                         <div className="stat-item text-center">
                             <div className="stat-label">Total Deposit</div>
                             <div className="stat-value">{formatUsd(totals.totalDeposit)}</div>
                         </div>
                         <div className="stat-item text-center">
-                            <div className="stat-label">Projected SAIL</div>
-                            <div className="stat-value">{totals.totalOsail.toFixed(2)}</div>
+                            <div className="stat-label">SAIL Earned</div>
+                            <div className="stat-value text-success">{formatUsd(totals.totalOsailValue)}</div>
+                        </div>
+                        <div className="stat-item text-center">
+                            <div className="stat-label">External Rewards</div>
+                            <div className="stat-value text-success">{formatUsd(totals.totalExternalRewards)}</div>
                         </div>
                         <div className="stat-item text-center">
                             <div className="stat-label">Est. IL</div>
