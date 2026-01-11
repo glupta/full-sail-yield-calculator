@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ScenarioPanel from './ScenarioPanel';
 import { loadInputs, saveInputs } from '../lib/persistence';
 import { fetchGaugePools } from '../lib/sdk';
+import { calculateTotalResults } from '../lib/scenario-calculator';
 
 const DEFAULT_SCENARIO = {
     pool: null,           // Each scenario has its own pool
@@ -65,6 +66,9 @@ export default function LPCalculator() {
         saveInputs('lp_calculator', { scenarios });
     }, [scenarios]);
 
+    // Calculate totals across all scenarios
+    const totals = useMemo(() => calculateTotalResults(scenarios), [scenarios]);
+
     const updateScenario = (index, updates) => {
         setScenarios(prev => prev.map((s, i) => {
             if (i !== index) return s;
@@ -104,6 +108,8 @@ export default function LPCalculator() {
         }
     };
 
+    const formatUsd = (val) => `$${val.toFixed(2)}`;
+
     return (
         <div>
             <div className="flex justify-between items-center mb-md">
@@ -129,6 +135,34 @@ export default function LPCalculator() {
                     />
                 ))}
             </div>
+
+            {/* Total Yield Summary */}
+            {totals.scenarioCount > 0 && (
+                <div className="glass-card mt-lg">
+                    <h4 className="mb-md">Portfolio Summary</h4>
+                    <div className="grid-4" style={{ gap: 'var(--space-md)' }}>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Total Deposit</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{formatUsd(totals.totalDeposit)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Projected oSAIL</div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>{totals.totalOsail.toFixed(2)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Est. IL</div>
+                            <div className="text-error" style={{ fontSize: '1.25rem', fontWeight: 600 }}>-{formatUsd(totals.totalIL)}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>Net Yield</div>
+                            <div className={totals.totalNetYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                                {totals.totalNetYield >= 0 ? '' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
