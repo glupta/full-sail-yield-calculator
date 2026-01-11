@@ -126,8 +126,10 @@ export function getPriceRangeFromPercent(currentPrice, lowerPct, upperPct) {
 
 /**
  * Preset range configurations - Meteora-style labels with percentages
+ * Ordered from widest (lowest risk) to narrowest (highest risk)
  */
 export const RANGE_PRESETS = [
+    { label: 'Full', sublabel: '(0, ∞)', lowerPct: -99, upperPct: 10000, description: 'Full range, 1x leverage' },
     { label: 'Wide', sublabel: '(-50%, +100%)', lowerPct: -50, upperPct: 100, description: 'Low risk, ~1.5x leverage' },
     { label: 'Balanced', sublabel: '(-25%, +33%)', lowerPct: -25, upperPct: 33, description: 'Medium risk, ~4x leverage' },
     { label: 'Narrow', sublabel: '(±10%)', lowerPct: -10, upperPct: 10, description: 'Higher risk, ~10x leverage' },
