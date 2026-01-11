@@ -260,6 +260,23 @@ export default function ScenarioPanel({
                 }}>
                     <h4 className="mb-md">Results</h4>
                     <div style={{ fontSize: '0.9rem' }}>
+                        {/* Column Headers */}
+                        <div className="flex justify-between text-muted" style={{
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            marginBottom: 'var(--space-xs)',
+                            paddingBottom: 'var(--space-xs)',
+                            borderBottom: '1px solid var(--border-subtle)'
+                        }}>
+                            <span></span>
+                            <div className="flex" style={{ gap: 'var(--space-md)' }}>
+                                <span style={{ width: '70px', textAlign: 'right' }}>Amount</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>Return</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>APR</span>
+                            </div>
+                        </div>
+
                         {/* SAIL Earned - Collapsible */}
                         <div
                             className="flex justify-between items-center"
@@ -270,9 +287,11 @@ export default function ScenarioPanel({
                                 <span className="text-muted">SAIL Earned</span>
                                 {isSailExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                             </span>
-                            <span className="text-success">
-                                +{formatUsd(results.osailValue)} ({results.sailAPR?.toFixed(1) || '0.0'}%)
-                            </span>
+                            <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
+                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.osailValue)}</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.osailValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{results.sailAPR?.toFixed(1) || '0.0'}%</span>
+                            </div>
                         </div>
 
                         {/* SAIL Breakdown - Collapsible */}
@@ -285,11 +304,19 @@ export default function ScenarioPanel({
                             }}>
                                 <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Redeemed (liquid)</span>
-                                    <span className="text-success">+{formatUsd(results.redeemValue)} ({results.redeemAPR?.toFixed(1) || '0.0'}%)</span>
+                                    <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
+                                        <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.redeemValue)}</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.redeemValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{results.redeemAPR?.toFixed(1) || '0.0'}%</span>
+                                    </div>
                                 </div>
                                 <div className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                     <span>→ Locked (veSAIL)</span>
-                                    <span className="text-success">+{formatUsd(results.lockValue)} ({results.lockAPR?.toFixed(1) || '0.0'}%)</span>
+                                    <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
+                                        <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.lockValue)}</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.lockValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{results.lockAPR?.toFixed(1) || '0.0'}%</span>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -306,9 +333,11 @@ export default function ScenarioPanel({
                                         <span className="text-muted">External Rewards</span>
                                         {isExternalExpanded ? <ChevronUp size={14} className="text-muted" /> : <ChevronDown size={14} className="text-muted" />}
                                     </span>
-                                    <span className="text-success">
-                                        +{formatUsd(results.externalRewardsValue)} ({results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%)
-                                    </span>
+                                    <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
+                                        <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.externalRewardsValue)}</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{((results.externalRewardsValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                        <span style={{ width: '50px', textAlign: 'right' }}>{results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%</span>
+                                    </div>
                                 </div>
 
                                 {/* External Breakdown */}
@@ -322,7 +351,11 @@ export default function ScenarioPanel({
                                         {results.externalRewards.map((reward, idx) => (
                                             <div key={idx} className="flex justify-between text-muted" style={{ padding: '2px 0', fontSize: '0.75rem' }}>
                                                 <span>→ {reward.token}</span>
-                                                <span className="text-success">+{formatUsd(reward.projectedValue)} ({reward.apr.toFixed(1)}%)</span>
+                                                <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
+                                                    <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(reward.projectedValue)}</span>
+                                                    <span style={{ width: '50px', textAlign: 'right' }}>{((reward.projectedValue / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                                    <span style={{ width: '50px', textAlign: 'right' }}>{reward.apr.toFixed(1)}%</span>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -333,10 +366,14 @@ export default function ScenarioPanel({
                         {/* IL */}
                         <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
                             <span className="text-muted">Impermanent Loss</span>
-                            <span className="text-error">-{formatUsd(results.ilDollar)} ({(Math.abs(results.ilPercent) * 100).toFixed(1)}%)</span>
+                            <div className="flex text-error" style={{ gap: 'var(--space-md)' }}>
+                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.ilDollar)}</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.ilDollar / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{(Math.abs(results.ilPercent) * 100 * (365 / scenario.timeline)).toFixed(1)}%</span>
+                            </div>
                         </div>
 
-                        {/* Net Yield - At Bottom */}
+                        {/* Net Yield */}
                         <div
                             className="flex justify-between"
                             style={{
@@ -346,17 +383,15 @@ export default function ScenarioPanel({
                                 borderTop: '1px solid var(--border-subtle)'
                             }}
                         >
-                            <span>Net Yield</span>
-                            <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>
-                                {results.netYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(results.netYield))}
-                                <span style={{ marginLeft: '6px', fontSize: '0.85rem', opacity: 0.9 }}>
-                                    ({((results.netYield / scenario.depositAmount) * 100).toFixed(1)}%)
-                                </span>
-                                {isWinner && ' ✓'}
-                            </span>
+                            <span>Net Yield {isWinner && '✓'}</span>
+                            <div className={`flex ${results.netYield >= 0 ? 'text-success' : 'text-error'}`} style={{ gap: 'var(--space-md)' }}>
+                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.netYield)}</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.netYield / scenario.depositAmount) * 100).toFixed(1)}%</span>
+                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}%</span>
+                            </div>
                         </div>
 
-                        {/* Final Value */}
+                        {/* Portfolio Value */}
                         <div
                             className="flex justify-between"
                             style={{
@@ -367,7 +402,7 @@ export default function ScenarioPanel({
                             }}
                         >
                             <span>Final Value</span>
-                            <span className="text-primary-color">
+                            <span style={{ color: 'var(--color-primary)' }}>
                                 {formatUsd(scenario.depositAmount + results.netYield)}
                             </span>
                         </div>
