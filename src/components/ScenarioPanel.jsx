@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { X, CheckCircle } from 'lucide-react';
-import { estimateILFromVolatility, calculateILDollarValue } from '../lib/calculators/il-calculator';
-import { projectEmissions, getEmissionValue } from '../lib/calculators/emission-projector';
+import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { STRATEGY_PRESETS } from '../lib/calculators/osail-strategy';
 
 export default function ScenarioPanel({
@@ -16,46 +15,10 @@ export default function ScenarioPanel({
     // Use pool from scenario
     const pool = scenario.pool;
 
-    // Calculate yields based on scenario inputs and pool data
+    // Calculate yields using centralized calculator (includes external rewards)
     const results = useMemo(() => {
-        if (!pool) return null;
-
-        const tvl = pool.dinamic_stats?.tvl || 0;
-        // SDK returns distributed_osail_24h in raw units (9 decimals for SUI tokens)
-        const osail24hRaw = pool.distributed_osail_24h || 0;
-        const osail24h = osail24hRaw / 1e9; // Convert to human-readable
-        const sailPrice = 0.5; // TODO: Fetch from SDK
-        const volatility = 0.8; // Default 80% annualized
-
-        // Project oSAIL emissions
-        const projectedOsail = projectEmissions(
-            scenario.depositAmount,
-            tvl,
-            osail24h,
-            scenario.timeline
-        );
-
-        // Calculate strategy value
-        const lockPct = scenario.osailStrategy / 100;
-        const strategyValue = getEmissionValue(projectedOsail, sailPrice, lockPct);
-
-        // Estimate IL
-        const ilEstimate = estimateILFromVolatility(volatility, scenario.timeline);
-        const ilDollar = calculateILDollarValue(scenario.depositAmount, ilEstimate.expected);
-
-        // Net yield
-        const netYield = strategyValue.totalValue - ilDollar;
-
-        return {
-            projectedOsail,
-            osailValue: strategyValue.totalValue,
-            lockValue: strategyValue.lockValue,
-            redeemValue: strategyValue.redeemValue,
-            ilPercent: ilEstimate.expected,
-            ilDollar,
-            netYield,
-        };
-    }, [pool, scenario]);
+        return calculateScenarioResults(scenario);
+    }, [scenario]);
 
     const formatUsd = (val) => `$${val.toFixed(2)}`;
     const formatOsail = (val) => `${val.toFixed(2)} SAIL`;
@@ -267,8 +230,8 @@ export default function ScenarioPanel({
                     onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
                 />
                 <div className="flex justify-between text-muted" style={{ fontSize: '0.75rem' }}>
-                    <span>Lock ({scenario.osailStrategy}%)</span>
                     <span>Redeem ({100 - scenario.osailStrategy}%)</span>
+                    <span>Lock ({scenario.osailStrategy}%)</span>
                 </div>
                 <div className="flex gap-sm mt-sm">
                     {Object.values(STRATEGY_PRESETS).map(preset => (
@@ -307,18 +270,18 @@ export default function ScenarioPanel({
                             fontSize: '0.9rem'
                         }}>
                             <div className="flex justify-between text-muted">
-                                <span>→ Redeemed (liquid)</span>
+                                <span>→ Redeemed (liquid) ({results.redeemAPR?.toFixed(1)}% APR)</span>
                                 <span className="text-success">{formatUsd(results.redeemValue)}</span>
                             </div>
                             <div className="flex justify-between text-muted">
-                                <span>→ Locked (veSAIL)</span>
+                                <span>→ Locked (veSAIL) ({results.lockAPR?.toFixed(1)}% APR)</span>
                                 <span className="text-success">{formatUsd(results.lockValue)}</span>
                             </div>
                         </div>
 
                         {/* Total SAIL Value */}
                         <div className="flex justify-between">
-                            <span className="text-muted">Total SAIL Value</span>
+                            <span className="text-muted">Total SAIL Value ({results.sailAPR?.toFixed(1)}% APR)</span>
                             <span className="text-success">{formatUsd(results.osailValue)}</span>
                         </div>
 

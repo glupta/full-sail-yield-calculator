@@ -4,7 +4,7 @@
  */
 
 import { calculateIL, estimateILFromVolatility, calculateILDollarValue } from './calculators/il-calculator';
-import { projectEmissions, getEmissionValue } from './calculators/emission-projector';
+import { projectEmissions, getEmissionValue, calculateEmissionAPR } from './calculators/emission-projector';
 
 // Default parameters (TODO: make configurable)
 const SAIL_PRICE = 0.5;
@@ -30,8 +30,18 @@ function calculateExternalRewards(rewards, depositAmount, timeline) {
             const dailyRate = apr / 100 / 365;
             const projectedValue = depositAmount * dailyRate * timeline;
 
+            // Handle both string tokens (e.g., "0x...::module::TOKEN") and object tokens (e.g., { symbol: "SUI" })
+            let tokenName = 'Unknown';
+            if (typeof reward.token === 'string') {
+                tokenName = reward.token.split('::').pop() || 'Unknown';
+            } else if (reward.token?.symbol) {
+                tokenName = reward.token.symbol;
+            } else if (reward.token?.name) {
+                tokenName = reward.token.name;
+            }
+
             return {
-                token: reward.token?.split('::').pop() || 'Unknown',
+                token: tokenName,
                 apr: apr,
                 projectedValue,
             };
@@ -67,6 +77,16 @@ export function calculateScenarioResults(scenario) {
     const lockPct = scenario.osailStrategy / 100;
     const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
 
+    // Calculate APRs for SAIL emissions
+    // Base SAIL emission APR (at 100% lock value)
+    const baseEmissionAPR = calculateEmissionAPR(osail24h, SAIL_PRICE, tvl);
+    // Lock APR = base APR (1:1 SAIL value)
+    const lockAPR = baseEmissionAPR * 100; // Convert to percentage
+    // Redeem APR = 50% of base (redeem at 50% SAIL price)
+    const redeemAPR = baseEmissionAPR * 50; // 50% of the value
+    // Blended APR based on strategy
+    const sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
+
     // Calculate external rewards (SUI incentives, etc.)
     const { externalRewards, externalRewardsValue } = calculateExternalRewards(
         pool.rewards,
@@ -98,6 +118,9 @@ export function calculateScenarioResults(scenario) {
         osailValue: strategyValue.totalValue,
         lockValue: strategyValue.lockValue,
         redeemValue: strategyValue.redeemValue,
+        lockAPR,
+        redeemAPR,
+        sailAPR,
         externalRewards,
         externalRewardsValue,
         ilPercent,
