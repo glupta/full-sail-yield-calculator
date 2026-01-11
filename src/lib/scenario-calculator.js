@@ -94,16 +94,17 @@ export function calculateScenarioResults(scenario) {
         scenario.timeline
     );
 
-    // Calculate IL - use exit price if provided, otherwise estimate from volatility
+    // Calculate IL - use exit price if provided, otherwise default to current price (0 IL)
     let ilPercent;
     const currentPrice = pool.currentPrice;
-    const exitPrice = scenario.exitPrice;
+    // If no exit price set, default to current price (0 IL) for explicit calculation
+    const exitPrice = scenario.exitPrice ?? currentPrice;
 
     if (currentPrice && exitPrice && exitPrice > 0) {
         // Use actual price change for IL calculation
         ilPercent = calculateIL(currentPrice, exitPrice);
     } else {
-        // Fall back to volatility-based estimation
+        // Fall back to volatility-based estimation only if no price data
         const ilEstimate = estimateILFromVolatility(DEFAULT_VOLATILITY, scenario.timeline);
         ilPercent = ilEstimate.expected;
     }
