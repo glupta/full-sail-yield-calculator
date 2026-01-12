@@ -797,6 +797,491 @@ input[type="range"]::-moz-range-thumb {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* Input Group - Subtle Visual Grouping */
+.input-group {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.input-group-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Claim Strategy - Polished Segmented Control */
+.claim-strategy-section {
+  background: rgba(0, 160, 255, 0.03);
+  border: 1px solid rgba(0, 160, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.claim-strategy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+}
+
+.claim-strategy-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.claim-strategy-values {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 0.7rem;
+}
+
+.claim-strategy-values span {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.claim-strategy-values span.active {
+  background: rgba(0, 160, 255, 0.15);
+  color: var(--color-primary);
+}
+
+/* Claim Strategy - Bottom Values (Redeem left, Lock right) */
+.claim-strategy-values-bottom {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-xs);
+  font-size: 0.7rem;
+}
+
+.claim-strategy-values-bottom span {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.claim-strategy-values-bottom span.active {
+  background: rgba(0, 160, 255, 0.15);
+  color: var(--color-primary);
+}
+
+/* Pool Metrics Grid - Below Pool Selector */
+.pool-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xs);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .pool-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pool-metric-item {
+  text-align: center;
+  padding: var(--space-xs);
+}
+
+.pool-metric-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.pool-metric-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+
+/* Range Percentage Inputs - Inline Quick Set */
+.range-percent-inputs {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+.range-percent-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.range-percent-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-sm);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.range-percent-input-wrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 160, 255, 0.15);
+}
+
+.range-percent-prefix {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  user-select: none;
+  width: 16px;
+  text-align: center;
+}
+
+.range-percent-input {
+  width: 50px;
+  background: transparent !important;
+  border: none !important;
+  padding: var(--space-xs) 0 !important;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  box-shadow: none !important;
+}
+
+.range-percent-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.range-percent-suffix {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  user-select: none;
+}
+
+.range-percent-divider {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+@media (max-width: 480px) {
+  .range-percent-input {
+    width: 40px;
+  }
+}
+
+/* Price Range Cards - Uniswap Style */
+.price-range-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+@media (max-width: 480px) {
+  .price-range-cards {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+}
+
+.price-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  text-align: center;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.price-card:focus-within {
+  border-color: var(--color-primary);
+}
+
+.price-card-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+  font-weight: 600;
+}
+
+.price-card-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.price-stepper {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.price-stepper:hover:not(:disabled) {
+  background: rgba(0, 160, 255, 0.1);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.price-stepper:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.price-stepper:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.price-card-input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) !important;
+}
+
+.price-card-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px rgba(0, 160, 255, 0.1) !important;
+}
+
+.price-card-change {
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-top: var(--space-xs);
+  font-family: var(--font-mono);
+}
+
+.price-card-change.negative {
+  color: var(--color-error);
+}
+
+.price-card-change.positive {
+  color: var(--color-success);
+}
+
+/* Current Price Badge */
+.current-price-badge {
+  margin-top: var(--space-md);
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 600;
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(0, 160, 255, 0.05);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  width: 100%;
+}
+
+/* Price Range Inline - Compact Layout */
+.price-range-inline {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+@media (max-width: 640px) {
+  .price-range-inline {
+    grid-template-columns: 1fr;
+  }
+}
+
+.price-range-preset {
+  /* inherits 1fr from grid */
+}
+
+.price-range-preset select {
+  width: 100%;
+  font-size: 0.8rem;
+  padding: var(--space-sm);
+}
+
+.price-range-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.price-range-field-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.price-range-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.price-stepper-mini {
+  width: 28px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.price-stepper-mini:hover:not(:disabled) {
+  background: rgba(0, 160, 255, 0.1);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.price-stepper-mini:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.price-range-input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.price-range-change {
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.current-price-inline {
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Metrics Grid - Hero Display */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-sm);
+  background: rgba(0, 160, 255, 0.03);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 160, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metric-item {
+  text-align: center;
+  padding: var(--space-xs);
+}
+
+.metric-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  line-height: 1.2;
+}
+
+.metric-value.positive {
+  color: var(--color-success);
+}
+
+.metric-value.negative {
+  color: var(--color-error);
+}
+
+.metric-value.neutral {
+  color: var(--color-primary);
+}
+
+/* Prefix Label Enhancement */
+.prefix-label {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+/* Monospace Values in Tables */
+.mono-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Entrance Animations */
 @keyframes fadeInUp {
   from {

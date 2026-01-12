@@ -75,6 +75,28 @@ export default function ScenarioPanel({
         return `$${tvl.toFixed(0)}`;
     };
 
+    // Format pool pair with preferred ordering: USDC last, then SUI, then stSUI
+    const formatPairLabel = (token0, token1) => {
+        const quoteTokens = ['USDC', 'USDT', 'DAI', 'SUI', 'STSUI', 'AFSUI', 'HASUI', 'VSUI'];
+        const token0Upper = (token0 || '').toUpperCase();
+        const token1Upper = (token1 || '').toUpperCase();
+
+        // Find priority (lower = should be last)
+        const getPriority = (t) => {
+            if (t.includes('USDC') || t.includes('USDT') || t.includes('DAI')) return 0;
+            if (t === 'SUI') return 1;
+            if (t.includes('SUI')) return 2; // stSUI, afSUI, etc
+            return 10;
+        };
+
+        const p0 = getPriority(token0Upper);
+        const p1 = getPriority(token1Upper);
+
+        // Lower priority token goes last (quote currency)
+        if (p0 < p1) return `${token1}/${token0}`;
+        return `${token0}/${token1}`;
+    };
+
     // Accordion header styles
     const accordionHeaderStyle = {
         padding: 'var(--space-xs) 0',
@@ -97,7 +119,7 @@ export default function ScenarioPanel({
         >
             {/* Header */}
             <div className="flex justify-between items-center mb-md">
-                <h4 style={{ fontSize: '1.1rem' }}>Scenario {index + 1}</h4>
+                <span className="price-range-field-label" style={{ marginBottom: 0, fontSize: '1rem' }}>Scenario {index + 1}</span>
                 <div className="flex gap-sm items-center">
                     {isWinner && <CheckCircle size={18} className="text-success" />}
                     {onRemove && (
@@ -132,9 +154,7 @@ export default function ScenarioPanel({
 
             {/* Pool Selection */}
             <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                    Pool
-                </label>
+                <label className="price-range-field-label">Pool</label>
                 {poolsLoading ? (
                     <div className="skeleton" style={{ height: '48px' }}></div>
                 ) : (
@@ -142,32 +162,49 @@ export default function ScenarioPanel({
                         value={pool?.id || ''}
                         onChange={(e) => {
                             const selected = pools.find(p => p.id === e.target.value);
-                            onChange({ pool: selected });
+                            onChange({ pool: selected, exitPrice: null, priceRangeLow: null, priceRangeHigh: null });
                         }}
                         style={{ width: '100%' }}
                     >
                         <option value="">Select a pool...</option>
-                        {pools.map(p => (
+                        {[...pools].sort((a, b) => (b.dinamic_stats?.tvl || 0) - (a.dinamic_stats?.tvl || 0)).map(p => (
                             <option key={p.id} value={p.id}>
-                                {p.token0_symbol}/{p.token1_symbol} ({formatTVL(p.dinamic_stats?.tvl)})
+                                {formatPairLabel(p.token0_symbol, p.token1_symbol)}
                             </option>
                         ))}
                     </select>
                 )}
                 {pool && (
-                    <div className="flex gap-md mt-sm text-muted" style={{ fontSize: '0.7rem' }}>
-                        <span>TVL: {formatTVL(pool.dinamic_stats?.tvl)}</span>
+                    <div className="pool-metrics-grid mt-md">
+                        <div className="pool-metric-item">
+                            <div className="pool-metric-label">TVL</div>
+                            <div className="pool-metric-value">{formatTVL(pool.dinamic_stats?.tvl)}</div>
+                        </div>
+                        <div className="pool-metric-item">
+                            <div className="pool-metric-label">24h Volume</div>
+                            <div className="pool-metric-value">{formatTVL(pool.dinamic_stats?.volume_24h)}</div>
+                        </div>
+                        <div className="pool-metric-item">
+                            <div className="pool-metric-label">Current Price</div>
+                            <div className="pool-metric-value">
+                                ${pool.currentPrice < 0.01
+                                    ? pool.currentPrice?.toFixed(6)
+                                    : pool.currentPrice?.toFixed(4)}
+                            </div>
+                        </div>
+                        <div className="pool-metric-item">
+                            <div className="pool-metric-label">Base APR</div>
+                            <div className="pool-metric-value text-success">{pool.full_apr?.toFixed(0) || 0}%</div>
+                        </div>
                     </div>
                 )}
             </div>
 
 
             {/* Deposit Amount & Exit Price - Responsive stack on mobile */}
-            <div className="flex gap-md mb-md mobile-stack">
-                <div style={{ flex: 1 }}>
-                    <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                        Deposit Amount
-                    </label>
+            <div className="price-range-inline mb-md" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div className="price-range-field">
+                    <label className="price-range-field-label">Deposit Amount</label>
                     <div style={{ position: 'relative' }}>
                         <span style={{
                             position: 'absolute',
@@ -197,10 +234,9 @@ export default function ScenarioPanel({
                     </div>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                    <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                        Exit Price
-                        <span className="text-muted" style={{ fontSize: '0.6rem', marginLeft: '4px', opacity: 0.7 }}>(IL calc)</span>
+                <div className="price-range-field">
+                    <label className="price-range-field-label">
+                        Exit Price <span style={{ opacity: 0.6 }}>(IL)</span>
                     </label>
                     <input
                         type="number"
@@ -223,16 +259,17 @@ export default function ScenarioPanel({
                         placeholder="Exit price"
                     />
                     {pool?.currentPrice && (
-                        <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '4px' }}>
+                        <div className="price-range-change" style={{ textAlign: 'left' }}>
                             {(() => {
                                 const exitPrice = scenario.exitPrice !== null && scenario.exitPrice !== undefined
                                     ? scenario.exitPrice
                                     : pool.currentPrice;
                                 const change = ((exitPrice / pool.currentPrice) - 1) * 100;
                                 if (!isFinite(change) || isNaN(change)) {
-                                    return '0.0% price change';
+                                    return '0.0% change';
                                 }
-                                return `${change >= 0 ? '+' : ''}${change.toFixed(1)}% price change`;
+                                const colorClass = change >= 0 ? 'text-success' : 'text-error';
+                                return <span className={colorClass}>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>;
                             })()}
                         </div>
                     )}
@@ -240,28 +277,29 @@ export default function ScenarioPanel({
             </div>
 
             {/* Price Range */}
-            <div className="mb-md">
-                <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                    Price Range
+            <div className="input-group mb-md">
+                <div className="input-group-label">
+                    <span>Price Range</span>
                     {pool?.currentPrice && (
-                        <span style={{ float: 'right', color: 'var(--color-primary)', fontWeight: 600 }}>
+                        <span className="current-price-inline">
                             Current: ${pool.currentPrice < 0.01
                                 ? pool.currentPrice.toFixed(6)
                                 : pool.currentPrice.toFixed(4)}
                         </span>
                     )}
-                </label>
+                </div>
 
-                {/* Range Preset Buttons */}
-                {pool?.currentPrice && (() => {
-                    const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
-                    return (
-                        <div className="flex gap-xs" style={{ flexWrap: 'wrap', marginBottom: 'var(--space-sm)' }}>
-                            {presets.map(preset => (
-                                <button
-                                    key={preset.label}
-                                    className="btn btn-secondary"
-                                    onClick={() => {
+                {/* Inline Layout: Preset Dropdown | Low | High */}
+                <div className="price-range-inline">
+                    {/* Preset Dropdown */}
+                    {pool?.currentPrice && (
+                        <div className="price-range-preset">
+                            <label className="price-range-field-label">Preset</label>
+                            <select
+                                onChange={(e) => {
+                                    const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
+                                    const preset = presets.find(p => p.label === e.target.value);
+                                    if (preset) {
                                         const range = getPriceRangeFromPercent(
                                             pool.currentPrice,
                                             preset.lowerPct,
@@ -271,102 +309,139 @@ export default function ScenarioPanel({
                                             priceRangeLow: roundToSigFigs(range.priceLow, 4),
                                             priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
                                         });
-                                    }}
-                                    style={{
-                                        flex: '1 1 auto',
-                                        minWidth: '55px',
-                                        padding: '6px 4px',
-                                        fontSize: '0.6rem',
-                                        lineHeight: 1.3
-                                    }}
-                                    title={preset.description}
-                                >
-                                    <div style={{ fontWeight: 600 }}>{preset.label}</div>
-                                    <div style={{ opacity: 0.6, fontSize: '0.5rem' }}>{preset.sublabel}</div>
-                                </button>
-                            ))}
-                        </div>
-                    );
-                })()}
-
-                {/* Price Range Inputs - Stack on mobile */}
-                <div className="flex gap-sm mobile-stack">
-                    <div style={{ flex: 1 }}>
-                        <input
-                            type="number"
-                            step="any"
-                            value={scenario.priceRangeLow ?? ''}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '' || val === null) {
-                                    onChange({ priceRangeLow: null });
-                                } else {
-                                    const numVal = parseFloat(val);
-                                    if (!isNaN(numVal)) {
-                                        onChange({ priceRangeLow: numVal });
                                     }
-                                }
-                            }}
-                            style={{ width: '100%' }}
-                            placeholder="Low"
-                        />
+                                }}
+                                defaultValue="Balanced"
+                            >
+                                {(isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS).map(preset => (
+                                    <option key={preset.label} value={preset.label}>
+                                        {preset.label} ({preset.lowerPct}%, {preset.upperPct > 1000 ? '∞' : `+${preset.upperPct}%`})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {/* Low Price */}
+                    <div className="price-range-field">
+                        <label className="price-range-field-label">Low</label>
+                        <div className="price-range-input-row">
+                            <button
+                                className="price-stepper-mini"
+                                onClick={() => {
+                                    if (scenario.priceRangeLow) {
+                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 0.99, 4) });
+                                    }
+                                }}
+                                disabled={!scenario.priceRangeLow}
+                            >−</button>
+                            <input
+                                type="number"
+                                step="any"
+                                value={scenario.priceRangeLow ?? ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || val === null) {
+                                        onChange({ priceRangeLow: null });
+                                    } else {
+                                        const numVal = parseFloat(val);
+                                        if (!isNaN(numVal)) {
+                                            onChange({ priceRangeLow: numVal });
+                                        }
+                                    }
+                                }}
+                                className="price-range-input"
+                                placeholder="$0.00"
+                            />
+                            <button
+                                className="price-stepper-mini"
+                                onClick={() => {
+                                    if (scenario.priceRangeLow) {
+                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 1.01, 4) });
+                                    }
+                                }}
+                                disabled={!scenario.priceRangeLow}
+                            >+</button>
+                        </div>
                         {pool?.currentPrice && scenario.priceRangeLow > 0 && (
-                            <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
+                            <div className="price-range-change text-error">
                                 {(() => {
                                     const change = ((scenario.priceRangeLow / pool.currentPrice) - 1) * 100;
-                                    if (!isFinite(change) || isNaN(change)) return '0.0% from current';
-                                    return `${change.toFixed(1)}% from current`;
-                                })()}
-                            </div>
-                        )}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <input
-                            type="number"
-                            step="any"
-                            value={scenario.priceRangeHigh ?? ''}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === '' || val === null) {
-                                    onChange({ priceRangeHigh: null });
-                                } else {
-                                    const numVal = parseFloat(val);
-                                    if (!isNaN(numVal)) {
-                                        onChange({ priceRangeHigh: numVal });
-                                    }
-                                }
-                            }}
-                            style={{ width: '100%' }}
-                            placeholder="High"
-                        />
-                        {pool?.currentPrice && scenario.priceRangeHigh > 0 && (
-                            <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
-                                {(() => {
-                                    const change = ((scenario.priceRangeHigh / pool.currentPrice) - 1) * 100;
-                                    if (!isFinite(change) || isNaN(change)) return '+0.0% from current';
-                                    return `+${change.toFixed(1)}% from current`;
+                                    return `${change.toFixed(1)}%`;
                                 })()}
                             </div>
                         )}
                     </div>
 
-                    {/* Claim Strategy - inline with price range */}
-                    <div style={{ flex: 1, minWidth: '180px' }}>
-                        <label className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: 'var(--space-xs)', fontWeight: 500 }}>
-                            Claim Strategy
-                        </label>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={scenario.osailStrategy}
-                            onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
-                        />
-                        <div className="flex justify-between text-muted" style={{ fontSize: '0.65rem', marginTop: '2px' }}>
-                            <span>Redeem ({100 - scenario.osailStrategy}%)</span>
-                            <span>Lock ({scenario.osailStrategy}%)</span>
+                    {/* High Price */}
+                    <div className="price-range-field">
+                        <label className="price-range-field-label">High</label>
+                        <div className="price-range-input-row">
+                            <button
+                                className="price-stepper-mini"
+                                onClick={() => {
+                                    if (scenario.priceRangeHigh) {
+                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 0.99, 4) });
+                                    }
+                                }}
+                                disabled={!scenario.priceRangeHigh}
+                            >−</button>
+                            <input
+                                type="number"
+                                step="any"
+                                value={scenario.priceRangeHigh ?? ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === '' || val === null) {
+                                        onChange({ priceRangeHigh: null });
+                                    } else {
+                                        const numVal = parseFloat(val);
+                                        if (!isNaN(numVal)) {
+                                            onChange({ priceRangeHigh: numVal });
+                                        }
+                                    }
+                                }}
+                                className="price-range-input"
+                                placeholder="$0.00"
+                            />
+                            <button
+                                className="price-stepper-mini"
+                                onClick={() => {
+                                    if (scenario.priceRangeHigh) {
+                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 1.01, 4) });
+                                    }
+                                }}
+                                disabled={!scenario.priceRangeHigh}
+                            >+</button>
                         </div>
+                        {pool?.currentPrice && scenario.priceRangeHigh > 0 && (
+                            <div className="price-range-change text-success">
+                                {(() => {
+                                    const change = ((scenario.priceRangeHigh / pool.currentPrice) - 1) * 100;
+                                    return `+${change.toFixed(1)}%`;
+                                })()}
+                            </div>
+                        )}
                     </div>
+                </div>
+            </div>
+
+            {/* Claim Strategy - Dedicated Section */}
+            <div className="claim-strategy-section mb-md">
+                <div className="claim-strategy-header">
+                    <span className="claim-strategy-label">Claim Strategy</span>
+                </div>
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={scenario.osailStrategy}
+                    onChange={(e) => onChange({ osailStrategy: Number(e.target.value) })}
+                    style={{ margin: 0 }}
+                />
+                <div className="claim-strategy-values-bottom">
+                    <span className={scenario.osailStrategy < 50 ? 'active' : ''}>Redeem {100 - scenario.osailStrategy}%</span>
+                    <span className={scenario.osailStrategy >= 50 ? 'active' : ''}>Lock {scenario.osailStrategy}%</span>
                 </div>
             </div>
 
@@ -377,42 +452,7 @@ export default function ScenarioPanel({
                     paddingTop: 'var(--space-md)',
                     borderTop: '1px solid var(--border-subtle)'
                 }}>
-                    {/* Visual Metrics Row */}
-                    <div
-                        className="flex gap-sm mb-md"
-                        style={{
-                            justifyContent: 'space-around',
-                            background: 'rgba(0, 160, 255, 0.03)',
-                            padding: 'var(--space-sm)',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid rgba(0, 160, 255, 0.08)'
-                        }}
-                    >
-                        <div style={{ textAlign: 'center' }}>
-                            <div className="text-muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.5px' }}>Est. APR</div>
-                            <div className="text-success" style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                                {sdkAPR !== null
-                                    ? `${sdkAPR.toFixed(1)}%`
-                                    : rangeAPR
-                                        ? `${rangeAPR.estimatedAPR.toFixed(0)}%`
-                                        : `${pool?.full_apr?.toFixed(0) || 0}%`}
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <div className="text-muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.5px' }}>Leverage</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-primary)' }}>
-                                {leverage.toFixed(1)}x
-                            </div>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <div className="text-muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '2px', letterSpacing: '0.5px' }}>Net APR</div>
-                            <div className={results.netYield >= 0 ? 'text-success' : 'text-error'} style={{ fontSize: '1.2rem', fontWeight: 700 }}>
-                                {((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(0)}%
-                            </div>
-                        </div>
-                    </div>
-
-                    <h4 className="mb-sm" style={{ fontSize: '0.9rem' }}>Yield Breakdown</h4>
+                    <span className="price-range-field-label" style={{ fontSize: '0.9rem' }}>Yield Breakdown</span>
                     <div style={{ fontSize: '0.85rem' }}>
                         {/* Column Headers */}
                         <div className="flex justify-between text-muted" style={{
@@ -520,7 +560,7 @@ export default function ScenarioPanel({
                                 >
                                     {results.externalRewards.map((reward, idx) => (
                                         <div key={idx} className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
-                                            <span>→ {reward.token}</span>
+                                            <span>{reward.token}</span>
                                             <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
                                                 <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(reward.projectedValue)}</span>
                                                 <span style={{ width: '50px', textAlign: 'right' }}>{reward.apr.toFixed(1)}%</span>
