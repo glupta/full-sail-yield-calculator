@@ -35,10 +35,11 @@ function App() {
                     <h1 style={{ margin: 0 }}>Full Sail Yield Calculator</h1>
                 </header>
 
-                {/* Navigation */}
+                {/* Navigation - Hidden for now
                 <nav style={{ marginBottom: 'var(--space-xl)' }}>
                     <PersonaToggle persona={persona} onChange={setPersona} />
                 </nav>
+                */}
 
                 {/* Main Content */}
                 <main>

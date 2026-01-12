@@ -79,7 +79,9 @@ export default function LPCalculator() {
                     if (scenario.pool?.id) {
                         pool = fetchedPools.find(p => p.id === scenario.pool.id) || scenario.pool;
                     }
-                    return { ...scenario, id, pool };
+                    // Ensure timeline has a default value (may be missing from legacy saved data)
+                    const timeline = scenario.timeline ?? 30;
+                    return { ...scenario, id, pool, timeline };
                 });
                 setScenarios(restoredScenarios);
             } else if (fetchedPools.length > 0) {

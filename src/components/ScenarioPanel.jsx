@@ -4,6 +4,7 @@ import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
 import { calculateEstimatedAPRFromSDK, fetchSailPrice } from '../lib/sdk';
+import PoolAnalyticsPanel from './PoolAnalyticsPanel';
 
 export default function ScenarioPanel({
     index,
@@ -15,7 +16,7 @@ export default function ScenarioPanel({
     isWinner
 }) {
     const [isSailExpanded, setIsSailExpanded] = useState(false);
-    const [isExternalExpanded, setIsExternalExpanded] = useState(false);
+    const [isIncentivesExpanded, setIsIncentivesExpanded] = useState(false);
     const [sdkAPR, setSdkAPR] = useState(null);
     const [sailPrice, setSailPrice] = useState(0.01);
 
@@ -197,6 +198,11 @@ export default function ScenarioPanel({
                             <div className="pool-metric-value text-success">{pool.full_apr?.toFixed(0) || 0}%</div>
                         </div>
                     </div>
+                )}
+
+                {/* Pool Analytics Panel */}
+                {pool && (
+                    <PoolAnalyticsPanel pool={pool} />
                 )}
             </div>
 
@@ -464,10 +470,7 @@ export default function ScenarioPanel({
                             borderBottom: '1px solid var(--border-subtle)'
                         }}>
                             <span></span>
-                            <div className="flex" style={{ gap: 'var(--space-md)' }}>
-                                <span style={{ width: '70px', textAlign: 'right' }}>Amount</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>APR</span>
-                            </div>
+                            <span style={{ textAlign: 'right' }}>Amount</span>
                         </div>
 
                         {/* SAIL Earned - Collapsible */}
@@ -487,10 +490,7 @@ export default function ScenarioPanel({
                                     }}
                                 />
                             </span>
-                            <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
-                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.osailValue)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{results.sailAPR?.toFixed(1) || '0.0'}%</span>
-                            </div>
+                            <span className="text-success">{formatUsd(results.osailValue)}</span>
                         </div>
 
                         {/* SAIL Breakdown */}
@@ -507,64 +507,52 @@ export default function ScenarioPanel({
                         >
                             <div className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
                                 <span>Redeemed (liquid)</span>
-                                <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
-                                    <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.redeemValue)}</span>
-                                    <span style={{ width: '50px', textAlign: 'right' }}>{results.redeemAPR?.toFixed(1) || '0.0'}%</span>
-                                </div>
+                                <span className="text-success">{formatUsd(results.redeemValue)}</span>
                             </div>
                             <div className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
                                 <span>Locked (veSAIL)</span>
-                                <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
-                                    <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.lockValue)}</span>
-                                    <span style={{ width: '50px', textAlign: 'right' }}>{results.lockAPR?.toFixed(1) || '0.0'}%</span>
-                                </div>
+                                <span className="text-success">{formatUsd(results.lockValue)}</span>
                             </div>
                         </div>
 
-                        {/* External Rewards - Collapsible */}
+                        {/* Incentives - Collapsible */}
                         {results.externalRewards && results.externalRewards.length > 0 && (
                             <>
                                 <div
                                     className="flex justify-between items-center"
                                     style={accordionHeaderStyle}
-                                    onClick={() => setIsExternalExpanded(!isExternalExpanded)}
+                                    onClick={() => setIsIncentivesExpanded(!isIncentivesExpanded)}
                                 >
                                     <span className="flex items-center gap-sm">
-                                        <span className="text-muted">External Rewards</span>
+                                        <span className="text-muted">Incentives</span>
                                         <ChevronDown
                                             size={14}
                                             className="text-muted"
                                             style={{
                                                 transition: 'transform var(--duration-normal) var(--ease-out)',
-                                                transform: isExternalExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                transform: isIncentivesExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
                                             }}
                                         />
                                     </span>
-                                    <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
-                                        <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.externalRewardsValue)}</span>
-                                        <span style={{ width: '50px', textAlign: 'right' }}>{results.externalRewards.reduce((sum, r) => sum + r.apr, 0).toFixed(1)}%</span>
-                                    </div>
+                                    <span className="text-success">{formatUsd(results.externalRewardsValue)}</span>
                                 </div>
 
-                                {/* External Breakdown */}
+                                {/* Incentives Breakdown */}
                                 <div
                                     style={{
                                         overflow: 'hidden',
-                                        maxHeight: isExternalExpanded ? '200px' : '0',
-                                        opacity: isExternalExpanded ? 1 : 0,
+                                        maxHeight: isIncentivesExpanded ? '200px' : '0',
+                                        opacity: isIncentivesExpanded ? 1 : 0,
                                         transition: 'max-height var(--duration-slow) var(--ease-out), opacity var(--duration-normal) var(--ease-out)',
                                         marginLeft: 'var(--space-md)',
                                         paddingLeft: 'var(--space-md)',
-                                        borderLeft: isExternalExpanded ? '2px solid var(--border-subtle)' : 'none'
+                                        borderLeft: isIncentivesExpanded ? '2px solid var(--border-subtle)' : 'none'
                                     }}
                                 >
                                     {results.externalRewards.map((reward, idx) => (
                                         <div key={idx} className="flex justify-between text-muted" style={{ padding: '4px 0', fontSize: '0.7rem' }}>
                                             <span>{reward.token}</span>
-                                            <div className="flex text-success" style={{ gap: 'var(--space-md)' }}>
-                                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(reward.projectedValue)}</span>
-                                                <span style={{ width: '50px', textAlign: 'right' }}>{reward.apr.toFixed(1)}%</span>
-                                            </div>
+                                            <span className="text-success">{formatUsd(reward.projectedValue)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -574,10 +562,13 @@ export default function ScenarioPanel({
                         {/* IL */}
                         <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
                             <span className="text-muted">Impermanent Loss</span>
-                            <div className="flex text-error" style={{ gap: 'var(--space-md)' }}>
-                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.ilDollar)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{(Math.abs(results.ilPercent) * 100 * (365 / scenario.timeline)).toFixed(1)}%</span>
-                            </div>
+                            <span className="text-error">{formatUsd(results.ilDollar)}</span>
+                        </div>
+
+                        {/* Estimated APR */}
+                        <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
+                            <span className="text-muted">Estimated APR</span>
+                            <span className="text-success">{typeof sdkAPR === 'number' && !isNaN(sdkAPR) ? `${sdkAPR.toFixed(1)}%` : (typeof rangeAPR === 'number' && !isNaN(rangeAPR) ? `${rangeAPR.toFixed(1)}%` : '—')}</span>
                         </div>
 
                         {/* Net Yield */}
@@ -591,10 +582,7 @@ export default function ScenarioPanel({
                             }}
                         >
                             <span>Net Yield {isWinner && '✓'}</span>
-                            <div className={`flex ${results.netYield >= 0 ? 'text-success' : 'text-error'}`} style={{ gap: 'var(--space-md)' }}>
-                                <span style={{ width: '70px', textAlign: 'right' }}>{formatUsd(results.netYield)}</span>
-                                <span style={{ width: '50px', textAlign: 'right' }}>{((results.netYield / scenario.depositAmount) * (365 / scenario.timeline) * 100).toFixed(1)}%</span>
-                            </div>
+                            <span className={results.netYield >= 0 ? 'text-success' : 'text-error'}>{formatUsd(results.netYield)}</span>
                         </div>
 
                         {/* Final Return */}
