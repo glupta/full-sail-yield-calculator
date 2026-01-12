@@ -442,8 +442,8 @@ export default function ScenarioPanel({
                             color: 'var(--text-muted)'
                         }}>
                             <span></span>
-                            <span style={{ textAlign: 'right', minWidth: '60px' }}>APR</span>
                             <span style={{ textAlign: 'right', minWidth: '80px' }}>Amount</span>
+                            <span style={{ textAlign: 'right', minWidth: '60px' }}>APR</span>
                         </div>
 
                         {/* Helper to calculate APR from annual value */}
@@ -482,8 +482,8 @@ export default function ScenarioPanel({
                                                 }}
                                             />
                                         </span>
-                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{sailAPR.toFixed(1)}%</span>
                                         <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.osailValue)}</span>
+                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{sailAPR.toFixed(1)}%</span>
                                     </div>
 
                                     {/* SAIL Breakdown */}
@@ -500,13 +500,13 @@ export default function ScenarioPanel({
                                     >
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 'var(--space-md)', padding: '4px 0', fontSize: '0.7rem' }}>
                                             <span className="text-muted">Redeemed (liquid)</span>
-                                            <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(results.redeemValue).toFixed(1)}%</span>
                                             <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.redeemValue)}</span>
+                                            <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(results.redeemValue).toFixed(1)}%</span>
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 'var(--space-md)', padding: '4px 0', fontSize: '0.7rem' }}>
                                             <span className="text-muted">Locked (veSAIL)</span>
-                                            <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(results.lockValue).toFixed(1)}%</span>
                                             <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.lockValue)}</span>
+                                            <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(results.lockValue).toFixed(1)}%</span>
                                         </div>
                                     </div>
 
@@ -534,8 +534,8 @@ export default function ScenarioPanel({
                                                         }}
                                                     />
                                                 </span>
-                                                <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{incentivesAPR.toFixed(1)}%</span>
                                                 <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.externalRewardsValue)}</span>
+                                                <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{incentivesAPR.toFixed(1)}%</span>
                                             </div>
 
                                             {/* Incentives Breakdown */}
@@ -553,8 +553,8 @@ export default function ScenarioPanel({
                                                 {results.externalRewards.map((reward, idx) => (
                                                     <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 'var(--space-md)', padding: '4px 0', fontSize: '0.7rem' }}>
                                                         <span className="text-muted">{reward.token}</span>
-                                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(reward.projectedValue).toFixed(1)}%</span>
                                                         <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(reward.projectedValue)}</span>
+                                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(reward.projectedValue).toFixed(1)}%</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -564,8 +564,8 @@ export default function ScenarioPanel({
                                     {/* IL */}
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 'var(--space-md)', padding: 'var(--space-xs) 0' }}>
                                         <span className="text-muted">Impermanent Loss</span>
-                                        <span className="text-error" style={{ textAlign: 'right', minWidth: '60px' }}>{ilAPR > 0 ? `-${ilAPR.toFixed(1)}%` : '0.0%'}</span>
                                         <span className="text-error" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.ilDollar)}</span>
+                                        <span className="text-error" style={{ textAlign: 'right', minWidth: '60px' }}>{ilAPR > 0 ? `-${ilAPR.toFixed(1)}%` : '0.0%'}</span>
                                     </div>
 
                                     {/* Estimated APR - Only shown as reference, not in grid */}
@@ -587,8 +587,8 @@ export default function ScenarioPanel({
                                         }}
                                     >
                                         <span>Net Yield {isWinner && '✓'}</span>
-                                        <span className={results.netYield >= 0 ? 'text-success' : 'text-error'} style={{ textAlign: 'right', minWidth: '60px' }}>{netAPR >= 0 ? '' : '-'}{Math.abs(netAPR).toFixed(1)}%</span>
                                         <span className={results.netYield >= 0 ? 'text-success' : 'text-error'} style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(results.netYield)}</span>
+                                        <span className={results.netYield >= 0 ? 'text-success' : 'text-error'} style={{ textAlign: 'right', minWidth: '60px' }}>{netAPR >= 0 ? '' : '-'}{Math.abs(netAPR).toFixed(1)}%</span>
                                     </div>
                                 </>
                             );
