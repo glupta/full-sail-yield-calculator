@@ -69,13 +69,6 @@ export default function ScenarioPanel({
 
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    const formatTVL = (tvl) => {
-        if (!tvl) return '$0';
-        if (tvl >= 1e6) return `$${(tvl / 1e6).toFixed(1)}M`;
-        if (tvl >= 1e3) return `$${(tvl / 1e3).toFixed(0)}K`;
-        return `$${tvl.toFixed(0)}`;
-    };
-
     // Format pool pair with preferred ordering: USDC last, then SUI, then stSUI
     const formatPairLabel = (token0, token1) => {
         const quoteTokens = ['USDC', 'USDT', 'DAI', 'SUI', 'STSUI', 'AFSUI', 'HASUI', 'VSUI'];
@@ -175,31 +168,6 @@ export default function ScenarioPanel({
                         ))}
                     </select>
                 )}
-                {pool && (
-                    <div className="pool-metrics-grid mt-md">
-                        <div className="pool-metric-item">
-                            <div className="pool-metric-label">TVL</div>
-                            <div className="pool-metric-value">{formatTVL(pool.dinamic_stats?.tvl)}</div>
-                        </div>
-                        <div className="pool-metric-item">
-                            <div className="pool-metric-label">24h Volume</div>
-                            <div className="pool-metric-value">{formatTVL(pool.dinamic_stats?.volume_24h)}</div>
-                        </div>
-                        <div className="pool-metric-item">
-                            <div className="pool-metric-label">Current Price</div>
-                            <div className="pool-metric-value">
-                                ${pool.currentPrice < 0.01
-                                    ? pool.currentPrice?.toFixed(6)
-                                    : pool.currentPrice?.toFixed(4)}
-                            </div>
-                        </div>
-                        <div className="pool-metric-item">
-                            <div className="pool-metric-label">Base APR</div>
-                            <div className="pool-metric-value text-success">{pool.full_apr?.toFixed(0) || 0}%</div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Pool Analytics Panel */}
                 {pool && (
                     <PoolAnalyticsPanel pool={pool} />
