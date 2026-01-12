@@ -568,11 +568,7 @@ export default function ScenarioPanel({
                                         <span className="text-error" style={{ textAlign: 'right', minWidth: '60px' }}>{ilAPR > 0 ? `-${ilAPR.toFixed(1)}%` : '0.0%'}</span>
                                     </div>
 
-                                    {/* Estimated APR - Only shown as reference, not in grid */}
-                                    <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
-                                        <span className="text-muted">Estimated APR (SDK)</span>
-                                        <span className="text-success">{typeof sdkAPR === 'number' && !isNaN(sdkAPR) ? `${sdkAPR.toFixed(1)}%` : (typeof rangeAPR === 'number' && !isNaN(rangeAPR) ? `${rangeAPR.toFixed(1)}%` : '—')}</span>
-                                    </div>
+
 
                                     {/* Net Yield */}
                                     <div
