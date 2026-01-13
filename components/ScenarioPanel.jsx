@@ -92,14 +92,12 @@ export default function ScenarioPanel({
 
             setIsCalculatingAPR(true);
 
-            // Use the latest sail price (from ref to avoid stale closure)
-            const currentSailPrice = sailPriceRef.current > 0.01 ? sailPriceRef.current : sailPrice;
-
             // Add timeout to prevent hanging
             const timeoutId = setTimeout(() => {
                 if (!cancelled) {
-                    console.warn('SDK APR calculation timed out');
-                    setSdkAPR(null);
+                    console.warn('SDK APR calculation timed out, using fallback');
+                    // Fallback to pool.full_apr if SDK times out
+                    setSdkAPR(pool?.full_apr || null);
                     setIsCalculatingAPR(false);
                 }
             }, 10000); // 10 second timeout
@@ -114,14 +112,21 @@ export default function ScenarioPanel({
                 clearTimeout(timeoutId);
                 if (!cancelled) {
                     console.log('[APR Update]', result.apr, 'for pool:', pool.name);
-                    setSdkAPR(result.apr);
+                    // If SDK returns very low APR but pool has a reasonable full_apr, use that as fallback
+                    if (result.apr < 0.1 && pool?.full_apr > 1) {
+                        console.log('[APR Fallback] Using pool.full_apr:', pool.full_apr);
+                        setSdkAPR(pool.full_apr);
+                    } else {
+                        setSdkAPR(result.apr);
+                    }
                     setIsCalculatingAPR(false);
                 }
             }).catch((err) => {
                 clearTimeout(timeoutId);
                 if (!cancelled) {
                     console.error('[APR Error]', err);
-                    setSdkAPR(null);
+                    // Fallback to pool.full_apr on error
+                    setSdkAPR(pool?.full_apr || null);
                     setIsCalculatingAPR(false);
                 }
             });
@@ -131,7 +136,7 @@ export default function ScenarioPanel({
             cancelled = true;
             clearTimeout(debounceId);
         };
-    }, [poolKey, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
+    }, [poolKey, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy]);
 
 
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

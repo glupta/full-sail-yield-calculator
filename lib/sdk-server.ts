@@ -85,11 +85,21 @@ export async function fetchPoolById(poolId: string) {
     try {
         const sdk = getSDK();
         const pool = await sdk.Pool.getById(poolId);
-        return pool;
+        if (pool) return pool;
     } catch (error) {
-        console.error('Error fetching pool by ID:', error);
-        return null;
+        console.warn('getById failed, falling back to pool list:', error);
     }
+
+    // Fallback: search in full pool list
+    try {
+        const pools = await fetchGaugePools();
+        const pool = pools.find((p: any) => p.id === poolId || p.address === poolId);
+        if (pool) return pool;
+    } catch (error) {
+        console.error('Pool list fallback also failed:', error);
+    }
+
+    return null;
 }
 
 /**
