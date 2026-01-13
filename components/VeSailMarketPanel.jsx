@@ -229,46 +229,10 @@ export default function VeSailMarketPanel() {
                     </div>
                 </div>
 
-                {/* Right column: Chart + Sales History */}
+                {/* Right column: Sales History + Chart */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
-                    {/* Scatter Chart */}
-                    <div className="glass-card">
-                        <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
-                            <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
-                            Discount vs Size
-                        </h3>
-                        <div style={{ height: '180px', marginTop: 'var(--space-sm)' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                                    <XAxis
-                                        dataKey="lockedSail"
-                                        type="number"
-                                        scale="log"
-                                        domain={['auto', 'auto']}
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                                        tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}
-                                        label={{ value: 'Locked SAIL', position: 'bottom', fontSize: 10, fill: 'var(--text-muted)' }}
-                                    />
-                                    <YAxis
-                                        dataKey="discount"
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                                        tickFormatter={(v) => `${v > 0 ? '-' : '+'}${Math.abs(v).toFixed(0)}%`}
-                                        width={40}
-                                    />
-                                    <ReferenceLine y={0} stroke="var(--border-default)" strokeDasharray="3 3" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Scatter
-                                        data={chartData}
-                                        fill="var(--color-primary)"
-                                        fillOpacity={0.7}
-                                    />
-                                </ScatterChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
                     {/* Recent Sales */}
-                    <div className="glass-card" style={{ flex: 1 }}>
+                    <div className="glass-card">
                         <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
                             <Activity size={18} style={{ color: 'var(--color-primary)' }} />
                             Recent Sales
@@ -304,6 +268,42 @@ export default function VeSailMarketPanel() {
                                     </span>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Scatter Chart */}
+                    <div className="glass-card" style={{ flex: 1 }}>
+                        <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
+                            <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
+                            Discount vs Size
+                        </h3>
+                        <div style={{ height: '180px', marginTop: 'var(--space-sm)' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
+                                    <XAxis
+                                        dataKey="lockedSail"
+                                        type="number"
+                                        scale="log"
+                                        domain={['auto', 'auto']}
+                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                                        tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}
+                                        label={{ value: 'Locked SAIL', position: 'bottom', fontSize: 10, fill: 'var(--text-muted)' }}
+                                    />
+                                    <YAxis
+                                        dataKey="discount"
+                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+                                        tickFormatter={(v) => `${v > 0 ? '-' : '+'}${Math.abs(v).toFixed(0)}%`}
+                                        width={40}
+                                    />
+                                    <ReferenceLine y={0} stroke="var(--border-default)" strokeDasharray="3 3" />
+                                    <Tooltip content={<CustomTooltip />} />
+                                    <Scatter
+                                        data={chartData}
+                                        fill="var(--color-primary)"
+                                        fillOpacity={0.7}
+                                    />
+                                </ScatterChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>
