@@ -130,25 +130,38 @@ export function calculateScenarioResults(scenario, effectiveAPR = null) {
     // If effectiveAPR is provided (from SDK's estimateAprByLiquidity), use it directly
     // Otherwise, fall back to emission-based calculation
     let projectedOsail, sailAPR, lockAPR, redeemAPR;
+    let strategyValue;
     const lockPct = scenario.osailStrategy / 100;
 
     if (effectiveAPR !== null && effectiveAPR > 0) {
-        // Use SDK-provided APR to calculate yield directly
-        // effectiveAPR is the total APR for the position (already includes leverage)
-        sailAPR = effectiveAPR;
+        // effectiveAPR represents the base APR (what you get at 0% lock / 100% redeem)
+        // At 100% lock, APR doubles because veSAIL = 2x value of redeemed SAIL
+        redeemAPR = effectiveAPR;           // 0% lock = base APR
+        lockAPR = effectiveAPR * 2;          // 100% lock = 2x base APR
 
-        // For lock vs redeem breakdown:
-        // Lock gives 1:1 value, redeem gives 50% value
-        // SDK APR already factors in the claim strategy choice, so use as-is
-        lockAPR = effectiveAPR;
-        redeemAPR = effectiveAPR * 0.5; // Redeem is 50% of lock value
+        // Blend based on lock percentage for display
+        sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
 
-        // Calculate projected value from APR
-        const dailyRate = effectiveAPR / 100 / 365;
-        const projectedValue = scenario.depositAmount * dailyRate * scenario.timeline * timeInRangeFraction;
+        // Calculate SAIL values directly from APR (not through getEmissionValue)
+        // This ensures the yield breakdown matches the input APR
+        const annualRedeemValue = scenario.depositAmount * (redeemAPR / 100);
+        const annualLockValue = scenario.depositAmount * (lockAPR / 100);
 
-        // Estimate oSAIL amount from projected value
-        projectedOsail = projectedValue / SAIL_PRICE; // Approximate oSAIL amount
+        // Pro-rate by timeline and time in range
+        const timeMultiplier = (scenario.timeline / 365) * timeInRangeFraction;
+
+        const redeemValue = annualRedeemValue * (1 - lockPct) * timeMultiplier;
+        const lockValue = annualLockValue * lockPct * timeMultiplier;
+
+        strategyValue = {
+            lockValue,
+            redeemValue,
+            totalValue: lockValue + redeemValue,
+            lockPortion: lockValue / SAIL_PRICE,
+            redeemPortion: redeemValue / SAIL_PRICE,
+        };
+
+        projectedOsail = strategyValue.lockPortion + strategyValue.redeemPortion;
     } else {
         // Fall back to emission-based calculation
         const baseProjectedOsail = projectEmissions(
@@ -167,10 +180,10 @@ export function calculateScenarioResults(scenario, effectiveAPR = null) {
         lockAPR = leveragedEmissionAPR * 100;
         redeemAPR = leveragedEmissionAPR * 50;
         sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
-    }
 
-    // Calculate strategy value
-    const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
+        // Use getEmissionValue for fallback calculation
+        strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
+    }
 
     // Calculate external rewards (SUI incentives, etc.) - scaled by leverage like SAIL emissions
     const { externalRewards, externalRewardsValue } = calculateExternalRewards(

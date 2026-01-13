@@ -595,17 +595,22 @@ export default function ScenarioPanel({
                             <span style={{ textAlign: 'right', minWidth: '60px' }}>APR</span>
                         </div>
 
-                        {/* Helper to calculate APR from annual value */}
+                        {/* Helper to calculate APR - annualize based on timeline */}
                         {(() => {
-                            const calcAPR = (annualValue) => {
+                            const timeline = scenario.timeline || 30; // Default to 30 days
+                            const annualizeAPR = (timelineValue) => {
                                 if (!scenario.depositAmount || scenario.depositAmount === 0) return 0;
-                                return (annualValue / scenario.depositAmount) * 100;
+                                const annualized = timelineValue * (365 / timeline);
+                                return (annualized / scenario.depositAmount) * 100;
                             };
+                            // Alias for use in breakdown sub-items
+                            const calcAPR = annualizeAPR;
 
-                            const sailAPR = calcAPR(results.osailValue);
-                            const incentivesAPR = calcAPR(results.externalRewardsValue || 0);
-                            const ilAPR = calcAPR(results.ilDollar);
-                            const netAPR = calcAPR(results.netYield);
+                            // Use sailAPR directly from results (already correctly calculated)
+                            const sailAPR = results.sailAPR || 0;
+                            const incentivesAPR = annualizeAPR(results.externalRewardsValue || 0);
+                            const ilAPR = annualizeAPR(results.ilDollar);
+                            const netAPR = annualizeAPR(results.netYield);
 
                             return (
                                 <>
