@@ -30,10 +30,9 @@ function calculateExternalRewards(rewards, depositAmount, timeline, leverageMult
         .filter(r => r.token && r.apr) // Filter valid rewards
         .map(reward => {
             // APR is in percentage (e.g., 50 = 50%)
-            // Apply leverage multiplier - concentrated positions earn proportionally more rewards
+            // Use base APR directly - Full Sail's Total APR = Incentives + Estimated (no leverage scaling)
             const baseApr = reward.apr || 0;
-            const leveragedApr = baseApr * leverageMultiplier;
-            const dailyRate = leveragedApr / 100 / 365;
+            const dailyRate = baseApr / 100 / 365;
             const projectedValue = depositAmount * dailyRate * timeline * timeInRangeFraction;
 
             // Handle both string tokens (e.g., "0x...::module::TOKEN") and object tokens (e.g., { symbol: "SUI" })
@@ -48,7 +47,7 @@ function calculateExternalRewards(rewards, depositAmount, timeline, leverageMult
 
             return {
                 token: tokenName,
-                apr: leveragedApr, // Return leveraged APR for display
+                apr: baseApr, // Return base APR (matches Full Sail display)
                 projectedValue,
             };
         });
