@@ -164,7 +164,7 @@ export async function estimateAPR({
         const tickSpacing = pool.tick_spacing || 60;
 
         const currentSqrtPrice = BigInt(pool.current_sqrt_price || 0);
-        if (currentSqrtPrice === 0n) {
+        if (currentSqrtPrice === BigInt(0)) {
             return { apr: 0, outOfRange: false, error: 'Invalid sqrt price' };
         }
 
