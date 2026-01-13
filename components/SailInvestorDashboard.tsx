@@ -224,14 +224,15 @@ export default function SailInvestorDashboard() {
                 }}>
                     <HeroMetric
                         label="SAIL Price"
-                        value={`$${metrics.sailPrice.toFixed(4)}`}
+                        value={`$${metrics.sailPrice.toFixed(5)}`}
+                        sublabel={`MC ${formatCompact(metrics.marketCap)}`}
                         icon={<DollarSign size={16} />}
                         tooltip="Current SAIL token price from SAIL/USDC pool"
                     />
                     <HeroMetric
                         label="Voting APR"
                         value={formatPercent(metrics.votingApr)}
-                        sublabel="From fees"
+                        sublabel={`${formatCompact(metrics.lastWeekFeesUsd)} weekly fees`}
                         icon={<TrendingUp size={16} />}
                         highlight={true}
                         tooltip="Annualized return from protocol fees distributed to veSAIL voters. Formula: (Weekly Fees ÷ Locked Value) × 52"
