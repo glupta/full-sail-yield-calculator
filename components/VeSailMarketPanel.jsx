@@ -5,8 +5,8 @@
  * Inspired by Vexy.fi design patterns
  */
 import { useState, useEffect } from 'react';
-import { TrendingDown, TrendingUp, Activity, ShoppingCart, ExternalLink, RefreshCw, HelpCircle } from 'lucide-react';
-import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { TrendingDown, TrendingUp, Activity, ShoppingCart, ExternalLink, RefreshCw, HelpCircle, Clock } from 'lucide-react';
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
 
 export default function VeSailMarketPanel() {
     const [data, setData] = useState(null);
@@ -58,12 +58,21 @@ export default function VeSailMarketPanel() {
 
     const { stats, recentSales, listings } = data;
 
-    // Prepare scatter chart data
-    const chartData = listings.map(l => ({
+    // Prepare scatter chart data - listings (blue) and sales (green)
+    const listingsChartData = listings.map(l => ({
         lockedSail: l.lockedSail,
         discount: l.discountPct,
         priceSui: l.priceSui,
         lockType: l.lockType,
+        type: 'listing'
+    }));
+
+    const salesChartData = recentSales.map(s => ({
+        lockedSail: s.lockedSail,
+        discount: s.discountPct,
+        priceSui: s.priceSui,
+        lockType: s.lockType,
+        type: 'sale'
     }));
 
     return (
@@ -320,7 +329,24 @@ export default function VeSailMarketPanel() {
                             <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
                             Discount vs Size
                         </h3>
-                        <div style={{ height: '180px', marginTop: 'var(--space-sm)' }}>
+                        {/* Legend */}
+                        <div style={{
+                            display: 'flex',
+                            gap: 'var(--space-md)',
+                            fontSize: '0.7rem',
+                            color: 'var(--text-muted)',
+                            marginTop: 'var(--space-xs)'
+                        }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-primary)' }}></span>
+                                Listings
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)' }}></span>
+                                Sales
+                            </span>
+                        </div>
+                        <div style={{ height: '160px', marginTop: 'var(--space-xs)' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
                                     <XAxis
@@ -341,8 +367,15 @@ export default function VeSailMarketPanel() {
                                     <ReferenceLine y={0} stroke="var(--border-default)" strokeDasharray="3 3" />
                                     <Tooltip content={<CustomTooltip />} />
                                     <Scatter
-                                        data={chartData}
+                                        name="Listings"
+                                        data={listingsChartData}
                                         fill="var(--color-primary)"
+                                        fillOpacity={0.7}
+                                    />
+                                    <Scatter
+                                        name="Sales"
+                                        data={salesChartData}
+                                        fill="var(--color-success)"
                                         fillOpacity={0.7}
                                     />
                                 </ScatterChart>
