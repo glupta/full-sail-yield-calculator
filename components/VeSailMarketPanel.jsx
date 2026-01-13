@@ -12,15 +12,23 @@ export default function VeSailMarketPanel() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [sailPriceUsd, setSailPriceUsd] = useState(null);
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/vesail');
-            if (!response.ok) throw new Error('Failed to fetch');
-            const result = await response.json();
+            const [vesailRes, priceRes] = await Promise.all([
+                fetch('/api/vesail'),
+                fetch('/api/sail-price')
+            ]);
+            if (!vesailRes.ok) throw new Error('Failed to fetch');
+            const result = await vesailRes.json();
             setData(result);
+            if (priceRes.ok) {
+                const priceData = await priceRes.json();
+                setSailPriceUsd(priceData.price);
+            }
         } catch (e) {
             setError(e.message);
         } finally {
@@ -118,12 +126,16 @@ export default function VeSailMarketPanel() {
                 }}>
                     <StatCard
                         label="veSAIL Price"
-                        value={`${stats.veSailPriceInSail?.toFixed(2) || 'N/A'} SAIL`}
-                        sublabel={stats.veSailPriceInSail < 1 ? `${(100 - stats.veSailPriceInSail * 100).toFixed(0)}% discount` : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
+                        value={sailPriceUsd && stats.veSailPriceInSail
+                            ? `$${(sailPriceUsd * stats.veSailPriceInSail).toFixed(6)}`
+                            : 'N/A'}
+                        sublabel={stats.veSailPriceInSail < 1
+                            ? `${(100 - stats.veSailPriceInSail * 100).toFixed(0)}% discount`
+                            : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
                         icon={null}
                         positive={stats.veSailPriceInSail < 1}
                         highlight={true}
-                        tooltip="Weighted average veSAIL price in SAIL terms based on recent trades"
+                        tooltip="Weighted average veSAIL price in USD based on recent trades"
                     />
                     <StatCard
                         label="Best Trade"
