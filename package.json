@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@fullsailfinance/sdk": "^6.0.0",
-    "@vitejs/plugin-react": "^5.1.2",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "react": "19.2.3",
@@ -33,7 +32,6 @@
     "jsdom": "^27.4.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vite-plugin-node-polyfills": "^0.24.0",
     "vitest": "^4.0.16"
   }
 }
