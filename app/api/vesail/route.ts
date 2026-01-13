@@ -102,6 +102,8 @@ export interface VeSailMarketData {
         totalSales: number;
         totalVolumeSui: number;
         avgDiscountPct: number;
+        weightedAvgDiscountPct: number;
+        veSailPriceInSail: number; // veSAIL price in SAIL terms
         bestDiscountPct: number;
         sailSpotPriceSui: number;
     };
@@ -226,11 +228,24 @@ export async function GET() {
             ? recentSales.reduce((sum, s) => sum + s.discountPct, 0) / recentSales.length
             : 0;
 
+        // Calculate weighted average discount (weighted by SAIL amount)
+        const totalSailWeight = recentSales.reduce((sum, s) => sum + s.lockedSail, 0);
+        const weightedAvgDiscountPct = totalSailWeight > 0
+            ? recentSales.reduce((sum, s) => sum + s.discountPct * s.lockedSail, 0) / totalSailWeight
+            : 0;
+
+        // veSAIL price in SAIL terms: if discount is 20%, veSAIL = 0.8 SAIL
+        // Discount > 0 means cheaper than SAIL, so veSAIL < 1 SAIL
+        // Discount < 0 (premium) means more expensive, so veSAIL > 1 SAIL
+        const veSailPriceInSail = 1 - (weightedAvgDiscountPct / 100);
+
         const response: VeSailMarketData = {
             stats: {
                 totalSales: trades.length,
                 totalVolumeSui,
                 avgDiscountPct,
+                weightedAvgDiscountPct,
+                veSailPriceInSail,
                 bestDiscountPct: bestDiscountPct === -Infinity ? 0 : bestDiscountPct,
                 sailSpotPriceSui: sailSpotPrice,
             },

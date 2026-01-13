@@ -108,11 +108,12 @@ export default function VeSailMarketPanel() {
                         tooltip="Best discount or premium seen vs SAIL spot price"
                     />
                     <StatCard
-                        label="SAIL Spot"
-                        value={`${(stats.sailSpotPriceSui * 1000).toFixed(2)}m SUI`}
-                        sublabel="per 1 SAIL"
+                        label="veSAIL Price"
+                        value={`${stats.veSailPriceInSail?.toFixed(2) || 'N/A'} SAIL`}
+                        sublabel={stats.veSailPriceInSail < 1 ? `${(100 - stats.veSailPriceInSail * 100).toFixed(0)}% discount` : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
                         icon={null}
-                        tooltip="Current SAIL spot price in milli-SUI (SUI × 1000)"
+                        positive={stats.veSailPriceInSail < 1}
+                        tooltip="Weighted average veSAIL price in SAIL terms based on recent trades"
                     />
                 </div>
             </div>
