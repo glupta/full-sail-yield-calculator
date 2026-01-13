@@ -81,10 +81,9 @@ export default function PoolAnalyticsPanel({ pool }) {
                     value={analytics.feeAprFormatted}
                 />
                 <MetricCard
-                    icon={<Coins size={14} />}
-                    label="Incentives APR"
-                    value={analytics.incentivesAprFormatted}
-                    accent="success"
+                    icon={<DollarSign size={14} />}
+                    label="Current Price"
+                    value={analytics.currentPriceFormatted}
                 />
                 <MetricCard
                     icon={<Percent size={14} />}
