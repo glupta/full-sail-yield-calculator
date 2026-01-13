@@ -6,7 +6,15 @@ import { fetchPools } from '@/lib/api-client';
 import { calculateTotalResults } from '@/lib/scenario-calculator';
 import { roundToSigFigs } from '@/lib/formatters';
 import { getDefaultPreset, getPriceRangeFromPercent } from '@/lib/calculators/leverage-calculator';
-import { Plus } from 'lucide-react';
+import { Plus, HelpCircle } from 'lucide-react';
+
+// Tooltip helper component
+const Tooltip = ({ text }) => (
+    <span className="tooltip-wrapper" style={{ marginLeft: '4px' }}>
+        <HelpCircle size={10} className="tooltip-icon" />
+        <span className="tooltip-text">{text}</span>
+    </span>
+);
 
 // Generate unique IDs for scenarios
 let scenarioIdCounter = 0;
@@ -184,30 +192,45 @@ export default function LPCalculator() {
                     {/* Stats Row - Crisp Grid Layout */}
                     <div className="summary-stats-grid">
                         <div className="stat-item text-center">
-                            <div className="stat-label">Total Deposit</div>
+                            <div className="stat-label">
+                                Total Deposit
+                                <Tooltip text="Total USD value deposited across all scenarios" />
+                            </div>
                             <div className="stat-value">{formatUsd(totals.totalDeposit)}</div>
                         </div>
 
                         <div className="stat-item text-center">
-                            <div className="stat-label">SAIL Earned</div>
+                            <div className="stat-label">
+                                SAIL Earned
+                                <Tooltip text="Value of oSAIL rewards from Full Sail emissions" />
+                            </div>
                             <div className="stat-value text-success">+{formatUsd(totals.totalOsailValue)}</div>
                             <div className="stat-apr">{totals.avgSailAPR?.toFixed(1) || '0.0'}% APR</div>
                         </div>
 
                         <div className="stat-item text-center">
-                            <div className="stat-label">External Rewards</div>
+                            <div className="stat-label">
+                                External Rewards
+                                <Tooltip text="Additional token rewards from partner incentives" />
+                            </div>
                             <div className="stat-value text-success">+{formatUsd(totals.totalExternalRewards)}</div>
                             <div className="stat-apr">{totals.avgExternalAPR?.toFixed(1) || '0.0'}% APR</div>
                         </div>
 
                         <div className="stat-item text-center">
-                            <div className="stat-label">Impermanent Loss</div>
+                            <div className="stat-label">
+                                Impermanent Loss
+                                <Tooltip text="Estimated loss from price movement vs holding" />
+                            </div>
                             <div className="stat-value text-error">-{formatUsd(totals.totalIL)}</div>
                             <div className="stat-apr">{totals.avgILAPR?.toFixed(1) || '0.0'}% APR</div>
                         </div>
 
                         <div className="stat-item text-center">
-                            <div className="stat-label">Net Yield</div>
+                            <div className="stat-label">
+                                Net Yield
+                                <Tooltip text="Total yield minus impermanent loss" />
+                            </div>
                             <div className={`stat-value ${totals.totalNetYield >= 0 ? 'text-success' : 'text-error'}`}>
                                 {totals.totalNetYield >= 0 ? '+' : '-'}{formatUsd(Math.abs(totals.totalNetYield))}
                             </div>
@@ -216,7 +239,10 @@ export default function LPCalculator() {
 
 
                         <div className="stat-item text-center">
-                            <div className="stat-label">Final Return</div>
+                            <div className="stat-label">
+                                Final Return
+                                <Tooltip text="Your deposit plus net yield at end of period" />
+                            </div>
                             <div className="stat-value" style={{ color: 'var(--color-primary)' }}>
                                 {formatUsd(totals.totalDeposit + totals.totalNetYield)}
                             </div>
