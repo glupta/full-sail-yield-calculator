@@ -333,13 +333,6 @@ export default function ScenarioPanel({
             <div className="input-group mb-md">
                 <div className="input-group-label">
                     <span>Price Range</span>
-                    {pool?.currentPrice && (
-                        <span className="current-price-inline">
-                            Current: ${pool.currentPrice < 0.01
-                                ? pool.currentPrice.toFixed(6)
-                                : pool.currentPrice.toFixed(4)}
-                        </span>
-                    )}
                 </div>
 
                 {/* Inline Layout: Preset Dropdown | Low | High */}
