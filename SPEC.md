@@ -19,13 +19,10 @@ The calculator uses the `@fullsailfinance/sdk` to fetch real-time pool data, pos
 #### 1.1 Inputs
 | Field | Type | Description |
 |-------|------|-------------|
-| Wallet Address | `string` | Optional. Fetches existing positions if provided |
 | Pool Selection | `dropdown` | Pools fetched from SDK (gauge-enabled only) |
 | Deposit Amount | `number` | USD value of LP deposit |
 | Price Range | `string` | e.g., "±10% around current price" |
-| Timeline | `number` | Projection horizon (default: 1 month) |
-| Volatility Override | `number` | Optional annualized σ (default: derived from historical on-chain data) |
-| Historical Range | `date-range` | Optional. For deriving volatility from specific period |
+| Exit Price | `number` | Projected exit price for IL calculation |
 | oSAIL Strategy | `slider` | % to Lock vs. % to Redeem (hybrid support) |
 
 #### 1.2 Outputs
@@ -108,18 +105,13 @@ The calculator uses the `@fullsailfinance/sdk` to fetch real-time pool data, pos
 #### 4.1 Architecture
 - **Unified Page**: Single page with persona toggle (LP ↔ Token Buyer)
 - **Scenario Comparison**: Side-by-side comparison of up to 3 scenarios
-- **Multi-Position Support**: Aggregate yields across multiple pools/positions
 
 #### 4.2 Persistence
 - **localStorage**: Save inputs for return visits
 
 #### 4.3 Pool Selection
 - **Dropdown**: Fetched from SDK (`Pool.getById`, gauge-enabled only)
-- **Filter**: By TVL, APR, token pair
-
-#### 4.4 Wallet Integration
-- **Optional Address Input**: Fetch existing positions/locks
-- **No Transaction Signing**: Read-only (no wallet connection required)
+- **Display**: Shows TVL inline with pool pair name
 
 ---
 

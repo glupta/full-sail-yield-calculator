@@ -219,7 +219,27 @@ h4 {
 
 @media (max-width: 640px) {
   .summary-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: var(--space-md);
+    padding-bottom: var(--space-sm);
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+  }
+
+  .summary-stats-grid::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+  }
+
+  .summary-stats-grid .stat-item {
+    flex: 0 0 auto;
+    min-width: 120px;
+    scroll-snap-align: start;
   }
 }
 
@@ -1810,4 +1830,94 @@ input[type="number"] {
   font-weight: 700;
   font-family: var(--font-mono);
   color: var(--color-warning);
+}
+
+/* Tooltip Component - CSS Only */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.tooltip-icon {
+  color: var(--text-muted);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.tooltip-wrapper:hover .tooltip-icon {
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+.tooltip-text {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-3);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  max-width: 280px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out), visibility var(--duration-fast) var(--ease-out);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border-accent);
+}
+
+.tooltip-wrapper:hover .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 640px) {
+  .tooltip-text {
+    left: auto;
+    right: 0;
+    transform: none;
+    max-width: 200px;
+  }
+
+  .tooltip-text::after {
+    left: auto;
+    right: 12px;
+    transform: none;
+  }
+}
+
+/* Loading Spinner Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  color: var(--color-primary);
 }

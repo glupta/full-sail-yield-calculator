@@ -1,10 +1,26 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { X, CheckCircle, ChevronDown } from 'lucide-react';
+import { X, CheckCircle, ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
 import { calculateEstimatedAPRFromSDK, fetchSailPrice } from '../lib/sdk';
 import PoolAnalyticsPanel from './PoolAnalyticsPanel';
+
+// Format number compactly (e.g., $1.2M, $500K)
+const formatCompactNumber = (num) => {
+    if (!num || num === 0) return '$0';
+    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `$${(num / 1_000).toFixed(0)}K`;
+    return `$${num.toFixed(0)}`;
+};
+
+// Tooltip helper component
+const Tooltip = ({ text }) => (
+    <span className="tooltip-wrapper" style={{ marginLeft: '4px' }}>
+        <HelpCircle size={12} className="tooltip-icon" />
+        <span className="tooltip-text">{text}</span>
+    </span>
+);
 
 export default function ScenarioPanel({
     index,
@@ -213,7 +229,7 @@ export default function ScenarioPanel({
                         <option value="">Select a pool...</option>
                         {[...pools].sort((a, b) => (b.dinamic_stats?.tvl || 0) - (a.dinamic_stats?.tvl || 0)).map(p => (
                             <option key={p.id} value={p.id}>
-                                {formatPairLabel(p.token0_symbol, p.token1_symbol)}
+                                {formatPairLabel(p.token0_symbol, p.token1_symbol)} • {formatCompactNumber(p.dinamic_stats?.tvl)}
                             </option>
                         ))}
                     </select>
@@ -261,6 +277,7 @@ export default function ScenarioPanel({
                 <div className="price-range-field">
                     <label className="price-range-field-label">
                         Exit Price <span style={{ opacity: 0.6 }}>(IL)</span>
+                        <Tooltip text="The projected price when you exit your position. Used to estimate impermanent loss." />
                     </label>
                     <input
                         type="number"
@@ -458,6 +475,7 @@ export default function ScenarioPanel({
                         <div className="price-range-field">
                             <label className="price-range-field-label">
                                 Estimated APR
+                                <Tooltip text="Projected annual percentage return based on current emissions and your price range concentration." />
                                 {scenario.aprOverride === null && sdkAPR !== null && !isCalculatingAPR && (
                                     <span style={{
                                         marginLeft: '6px',
@@ -467,12 +485,7 @@ export default function ScenarioPanel({
                                     }}>(SDK)</span>
                                 )}
                                 {isCalculatingAPR && (
-                                    <span style={{
-                                        marginLeft: '6px',
-                                        fontSize: '0.65rem',
-                                        color: 'var(--text-muted)',
-                                        opacity: 0.8
-                                    }}>calculating...</span>
+                                    <Loader2 size={12} className="loading-spinner" style={{ marginLeft: '6px' }} />
                                 )}
                             </label>
                             <div style={{ position: 'relative' }}>
@@ -531,7 +544,10 @@ export default function ScenarioPanel({
                             )}
                         </div>
                         <div className="price-range-field">
-                            <label className="price-range-field-label">Leverage</label>
+                            <label className="price-range-field-label">
+                                Leverage
+                                <Tooltip text="Higher concentration = more capital efficiency but greater impermanent loss risk. Values above 2x indicate tight ranges." />
+                            </label>
                             <div style={{
                                 padding: '12px',
                                 background: 'rgba(255,255,255,0.03)',
@@ -552,7 +568,10 @@ export default function ScenarioPanel({
             {/* Claim Strategy - Dedicated Section */}
             <div className="claim-strategy-section mb-md">
                 <div className="claim-strategy-header">
-                    <span className="claim-strategy-label">Claim Strategy</span>
+                    <span className="claim-strategy-label">
+                        Claim Strategy
+                        <Tooltip text="Lock converts oSAIL to veSAIL at 1:1 SAIL value (2x effective). Redeem converts to USDC at 50% spot price." />
+                    </span>
                 </div>
                 <input
                     type="range"

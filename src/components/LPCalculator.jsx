@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import ScenarioPanel from './ScenarioPanel';
-import { loadInputs, saveInputs } from '../lib/persistence';
 import { fetchGaugePools } from '../lib/sdk';
 import { calculateTotalResults } from '../lib/scenario-calculator';
 import { roundToSigFigs } from '../lib/formatters';
@@ -19,7 +18,7 @@ const createDefaultScenario = () => ({
     priceRangeHigh: null,
     exitPrice: null,
     timeline: 30,
-    osailStrategy: 70,
+    osailStrategy: 50,
     aprOverride: null, // null = use SDK-calculated APR, number = user override
 });
 
@@ -73,22 +72,8 @@ export default function LPCalculator() {
             setPools(fetchedPools);
             poolsRef.current = fetchedPools;
 
-            const saved = loadInputs('lp_calculator');
-            if (saved?.scenarios?.length) {
-                const restoredScenarios = saved.scenarios.map(scenario => {
-                    const id = scenario.id || generateScenarioId();
-                    let pool = null;
-                    if (scenario.pool?.id) {
-                        pool = fetchedPools.find(p => p.id === scenario.pool.id) || scenario.pool;
-                    }
-                    // Ensure timeline has a default value (may be missing from legacy saved data)
-                    const timeline = scenario.timeline ?? 30;
-                    // Ensure aprOverride is preserved (null for legacy data)
-                    const aprOverride = scenario.aprOverride ?? null;
-                    return { ...scenario, id, pool, timeline, aprOverride };
-                });
-                setScenarios(restoredScenarios);
-            } else if (fetchedPools.length > 0) {
+            // Always start with first pool and default settings
+            if (fetchedPools.length > 0) {
                 const pool = fetchedPools[0];
                 const defaultPreset = getDefaultPreset();
                 const range = pool?.currentPrice
@@ -109,12 +94,7 @@ export default function LPCalculator() {
         initializeCalculator();
     }, []);
 
-    // Persist on change
-    useEffect(() => {
-        if (isInitialized.current) {
-            saveInputs('lp_calculator', { scenarios });
-        }
-    }, [scenarios]);
+
 
     // Calculate totals
     const totals = useMemo(() => calculateTotalResults(scenarios), [scenarios]);
