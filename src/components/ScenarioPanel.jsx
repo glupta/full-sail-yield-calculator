@@ -1,9 +1,8 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
-import { X, CheckCircle, ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { X, CheckCircle, ChevronDown, HelpCircle } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
 import { roundToSigFigs } from '../lib/formatters';
-import { calculateEstimatedAPRFromSDK, fetchSailPrice } from '../lib/sdk';
 import PoolAnalyticsPanel from './PoolAnalyticsPanel';
 
 // Format number compactly (e.g., $1.2M, $500K)
@@ -33,19 +32,11 @@ export default function ScenarioPanel({
 }) {
     const [isSailExpanded, setIsSailExpanded] = useState(false);
     const [isIncentivesExpanded, setIsIncentivesExpanded] = useState(false);
-    const [sdkAPR, setSdkAPR] = useState(null);
-    const [sailPrice, setSailPrice] = useState(0.01);
-    const [isCalculatingAPR, setIsCalculatingAPR] = useState(false);
-    const sailPriceRef = useRef(0.01);
+    const [selectedPreset, setSelectedPreset] = useState('Balanced');
 
     const pool = scenario.pool;
 
-    const results = useMemo(() => {
-        // Determine effective APR: user override > SDK-calculated > null (fallback to emission calc)
-        const effectiveAPR = scenario.aprOverride !== null ? scenario.aprOverride : sdkAPR;
-        return calculateScenarioResults(scenario, effectiveAPR);
-    }, [scenario, sdkAPR]);
-
+    // Calculate rangeAPR first (needed for defaultAPR)
     const rangeAPR = useMemo(() => {
         if (!pool?.full_apr || !pool?.currentPrice) return null;
         const priceLow = scenario.priceRangeLow;
@@ -54,83 +45,21 @@ export default function ScenarioPanel({
         return calculateRangeAPR(pool.full_apr, pool.currentPrice, priceLow, priceHigh);
     }, [pool?.full_apr, pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
 
+    // Default APR is full_apr adjusted by leverage
+    const defaultAPR = rangeAPR?.estimatedAPR ?? null;
+
+    // Effective APR: user override > default (full_apr * leverage)
+    const effectiveAPR = scenario.aprOverride !== null ? scenario.aprOverride : defaultAPR;
+
+    const results = useMemo(() => {
+        return calculateScenarioResults(scenario, effectiveAPR);
+    }, [scenario, effectiveAPR]);
+
     // Calculate leverage for display
     const leverage = useMemo(() => {
         if (!pool?.currentPrice || !scenario.priceRangeLow || !scenario.priceRangeHigh) return 1;
         return calculateLeverage(pool.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh);
     }, [pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
-
-    // Fetch SAIL price on mount
-    useEffect(() => {
-        fetchSailPrice().then(price => {
-            if (price > 0) {
-                setSailPrice(price);
-                sailPriceRef.current = price;
-            }
-        });
-    }, []);
-
-    // Calculate SDK-based APR when price range or pool changes
-    // Use a poolKey to detect when pool's relevant properties change
-    const poolKey = pool ? `${pool.id}-${pool.current_sqrt_price}-${pool.distributed_osail_24h}` : null;
-
-    useEffect(() => {
-        if (!pool?.id || !scenario.priceRangeLow || !scenario.priceRangeHigh || !scenario.depositAmount) {
-            setSdkAPR(null);
-            setIsCalculatingAPR(false);
-            return;
-        }
-
-        let cancelled = false;
-
-        // Debounce: wait 500ms after last change before calculating
-        // This prevents excessive API calls while user is typing
-        const debounceId = setTimeout(() => {
-            if (cancelled) return;
-
-            setIsCalculatingAPR(true);
-
-            // Use the latest sail price (from ref to avoid stale closure)
-            const currentSailPrice = sailPriceRef.current > 0.01 ? sailPriceRef.current : sailPrice;
-
-            // Add timeout to prevent hanging
-            const timeoutId = setTimeout(() => {
-                if (!cancelled) {
-                    console.warn('SDK APR calculation timed out');
-                    setSdkAPR(null);
-                    setIsCalculatingAPR(false);
-                }
-            }, 10000); // 10 second timeout
-
-            calculateEstimatedAPRFromSDK({
-                pool,
-                priceLow: scenario.priceRangeLow,
-                priceHigh: scenario.priceRangeHigh,
-                depositAmount: scenario.depositAmount,
-                rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
-                sailPrice: currentSailPrice,
-            }).then(apr => {
-                clearTimeout(timeoutId);
-                if (!cancelled) {
-                    console.log('[APR Update]', apr, 'for pool:', pool.name);
-                    setSdkAPR(apr);
-                    setIsCalculatingAPR(false);
-                }
-            }).catch((err) => {
-                clearTimeout(timeoutId);
-                if (!cancelled) {
-                    console.error('[APR Error]', err);
-                    setSdkAPR(null);
-                    setIsCalculatingAPR(false);
-                }
-            });
-        }, 500); // 500ms debounce delay
-
-        return () => {
-            cancelled = true;
-            clearTimeout(debounceId);
-        };
-    }, [poolKey, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
 
 
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -222,7 +151,27 @@ export default function ScenarioPanel({
                         value={pool?.id || ''}
                         onChange={(e) => {
                             const selected = pools.find(p => p.id === e.target.value);
-                            onChange({ pool: selected, exitPrice: null, priceRangeLow: null, priceRangeHigh: null });
+                            if (selected?.currentPrice) {
+                                // Set default Balanced preset range when switching pools
+                                const presets = isStablePool(selected) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
+                                const balancedPreset = presets.find(p => p.label === 'Balanced') || presets[1];
+                                const range = getPriceRangeFromPercent(
+                                    selected.currentPrice,
+                                    balancedPreset.lowerPct,
+                                    balancedPreset.upperPct
+                                );
+                                setSelectedPreset('Balanced'); // Reset preset when switching pools
+                                onChange({
+                                    pool: selected,
+                                    exitPrice: null,
+                                    priceRangeLow: roundToSigFigs(range.priceLow, 4),
+                                    priceRangeHigh: roundToSigFigs(range.priceHigh, 4),
+                                    aprOverride: null
+                                });
+                            } else {
+                                setSelectedPreset('Balanced');
+                                onChange({ pool: selected, exitPrice: null, priceRangeLow: null, priceRangeHigh: null });
+                            }
                         }}
                         style={{ width: '100%' }}
                     >
@@ -337,10 +286,12 @@ export default function ScenarioPanel({
                         <div className="price-range-preset">
                             <label className="price-range-field-label">Preset</label>
                             <select
+                                value={selectedPreset}
                                 onChange={(e) => {
                                     const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
                                     const preset = presets.find(p => p.label === e.target.value);
                                     if (preset) {
+                                        setSelectedPreset(e.target.value);
                                         const range = getPriceRangeFromPercent(
                                             pool.currentPrice,
                                             preset.lowerPct,
@@ -353,7 +304,6 @@ export default function ScenarioPanel({
                                         });
                                     }
                                 }}
-                                defaultValue="Balanced"
                             >
                                 {(isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS).map(preset => (
                                     <option key={preset.label} value={preset.label}>
@@ -475,18 +425,7 @@ export default function ScenarioPanel({
                         <div className="price-range-field">
                             <label className="price-range-field-label">
                                 Estimated APR
-                                <Tooltip text="Projected annual percentage return based on current emissions and your price range concentration." />
-                                {scenario.aprOverride === null && sdkAPR !== null && !isCalculatingAPR && (
-                                    <span style={{
-                                        marginLeft: '6px',
-                                        fontSize: '0.65rem',
-                                        color: 'var(--color-primary)',
-                                        opacity: 0.8
-                                    }}>(SDK)</span>
-                                )}
-                                {isCalculatingAPR && (
-                                    <Loader2 size={12} className="loading-spinner" style={{ marginLeft: '6px' }} />
-                                )}
+                                <Tooltip text="Based on pool's base APR adjusted for your price range. Actual APR varies based on other LPs' positions. Cross-check with app.fullsail.finance." />
                             </label>
                             <div style={{ position: 'relative' }}>
                                 <input
@@ -495,7 +434,7 @@ export default function ScenarioPanel({
                                     min="0"
                                     value={scenario.aprOverride !== null
                                         ? scenario.aprOverride
-                                        : (sdkAPR !== null && sdkAPR > 0 ? sdkAPR.toFixed(1) : '')}
+                                        : (defaultAPR !== null && defaultAPR > 0 ? defaultAPR.toFixed(1) : '')}
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         if (val === '' || val === null) {
@@ -509,11 +448,9 @@ export default function ScenarioPanel({
                                     }}
                                     style={{
                                         width: '100%',
-                                        paddingRight: '28px',
-                                        opacity: isCalculatingAPR ? 0.6 : 1,
-                                        transition: 'opacity 0.2s ease'
+                                        paddingRight: '28px'
                                     }}
-                                    placeholder={isCalculatingAPR ? 'Calculating...' : 'Loading...'}
+                                    placeholder="Enter APR"
                                 />
                                 <span style={{
                                     position: 'absolute',
@@ -525,7 +462,7 @@ export default function ScenarioPanel({
                                     pointerEvents: 'none'
                                 }}>%</span>
                             </div>
-                            {scenario.aprOverride !== null && sdkAPR !== null && (
+                            {scenario.aprOverride !== null && defaultAPR !== null && (
                                 <button
                                     onClick={() => onChange({ aprOverride: null })}
                                     style={{
@@ -539,7 +476,7 @@ export default function ScenarioPanel({
                                         textDecoration: 'underline'
                                     }}
                                 >
-                                    Reset to SDK ({sdkAPR.toFixed(1)}%)
+                                    Reset to default ({defaultAPR.toFixed(1)}%)
                                 </button>
                             )}
                         </div>

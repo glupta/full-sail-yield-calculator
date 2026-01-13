@@ -232,7 +232,8 @@ export async function calculateEstimatedAPRFromSDK({
     priceHigh,
     depositAmount,
     rewardChoice = 'liquid',
-    sailCoin
+    sailCoin,
+    sailPrice: legacySailPrice  // Backward compatibility with ScenarioPanel
 }) {
     try {
         const { ClmmPoolUtil, TickMath, Decimal, PositionUtils } = await import('@fullsailfinance/sdk');
@@ -267,7 +268,10 @@ export async function calculateEstimatedAPRFromSDK({
 
         // Check if current price is within range
         const currentTick = TickMath.sqrtPriceX64ToTickIndex(currentSqrtPrice);
-        if (currentTick < lowerTick || currentTick > upperTick) {
+        const inRange = currentTick >= lowerTick && currentTick <= upperTick;
+
+        if (!inRange) {
+            console.log('[APR Debug] Position out of range, returning 0');
             return 0; // Position is out of range
         }
 
@@ -287,17 +291,34 @@ export async function calculateEstimatedAPRFromSDK({
         );
 
         // Use SDK's native estimateAprByLiquidity
+        const effectiveSailPrice = sailCoin?.current_price || legacySailPrice || 0.0026;
+
+        console.log('[APR Debug]', {
+            poolName: pool.name,
+            priceLow,
+            priceHigh,
+            lowerTick,
+            upperTick,
+            currentTick,
+            tokenAPrice,
+            depositAmount,
+            coinAmountA: coinAmountA.toString(),
+            liquidityAmount: liquidityAmount.toString(),
+            sailPrice: effectiveSailPrice,
+        });
+
         const estimatedApr = PositionUtils.estimateAprByLiquidity({
             pool,
             positionActiveLiquidity: liquidityAmount,
             positionAmountA: amountA,
             positionAmountB: amountB,
-            sailPrice: sailCoin?.current_price || 0.0026,
+            sailPrice: effectiveSailPrice,
             oSailDecimals: sailCoin?.decimals || 6,
-            rewardChoice: rewardChoice === 'vesail' ? 'vesail' : undefined,
+            rewardChoice: rewardChoice === 'vesail' ? 'vesail' : 'liquid',
             isNewPosition: true,
         });
 
+        console.log('[APR Debug] Result:', estimatedApr, '% for', pool.name);
         return estimatedApr;
     } catch (e) {
         console.error('Failed to calculate SDK-based APR:', e);

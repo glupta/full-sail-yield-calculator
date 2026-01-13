@@ -159,31 +159,48 @@ export async function estimateAPR({
     // Get current price from sqrt_price (SDK's native format)
     const token0 = pool.token_a;
     const token1 = pool.token_b;
-    const decimalsA = token0?.decimals || 9;
-    const decimalsB = token1?.decimals || 6;
+    const decimalsA = token0?.decimals ?? 9;
+    const decimalsB = token1?.decimals ?? 6;
 
     const sqrtPrice = BigInt(pool.current_sqrt_price || 0);
     const rawPrice = Number(sqrtPrice * sqrtPrice) / (2 ** 128);
     const sdkPrice = rawPrice * Math.pow(10, decimalsA - decimalsB);
 
-    // Detect if the UI price is inverted relative to SDK price
-    // If SDK price is > 1 and input prices are < 1, they're inverted
-    const inputMidpoint = (priceLow + priceHigh) / 2;
-    const pricesAreInverted = (sdkPrice > 1 && inputMidpoint < 1) || (sdkPrice < 1 && inputMidpoint > 1);
+    // Validate price
+    if (!sdkPrice || sdkPrice <= 0 || !isFinite(sdkPrice)) {
+        console.warn('[APR] Invalid SDK price:', sdkPrice, 'for pool:', pool.name);
+        return { apr: 0, outOfRange: false, error: 'Invalid price data' };
+    }
 
-    // Use SDK's native price format for calculation
+    // Check if token_a is a stable coin - if so, prices need to be inverted
+    // UI shows price as "BTC in USDC" (e.g., 91000), but SDK has it as "USDC in BTC" (e.g., 0.0000109)
+    const token0Symbol = pool.token_a?.address?.split('::').pop()?.toUpperCase() || '';
+    const isTokenAStable = token0Symbol === 'USDC' || token0Symbol === 'USDT';
+
+    // Use SDK's native price for calculations
     let currentPrice = sdkPrice;
-    let effectivePriceLow = priceLow;
-    let effectivePriceHigh = priceHigh;
+    let effectivePriceLow: number;
+    let effectivePriceHigh: number;
 
-    if (pricesAreInverted) {
-        // Convert UI price range to SDK format: invert and swap low/high
-        effectivePriceLow = 1 / priceHigh;  // UI high becomes SDK low when inverted
-        effectivePriceHigh = 1 / priceLow;  // UI low becomes SDK high when inverted
+    if (isTokenAStable) {
+        // Convert user's price range to SDK format: invert and swap low/high
+        // User thinks in "91000 BTC/USDC", SDK thinks in "0.0000109 USDC/BTC"
+        effectivePriceLow = 1 / priceHigh;
+        effectivePriceHigh = 1 / priceLow;
+    } else {
+        effectivePriceLow = priceLow;
+        effectivePriceHigh = priceHigh;
+    }
+
+    // Validate price range
+    if (effectivePriceLow <= 0 || effectivePriceHigh <= 0 || effectivePriceLow >= effectivePriceHigh) {
+        console.warn('[APR] Invalid price range:', { effectivePriceLow, effectivePriceHigh, priceLow, priceHigh, isTokenAStable });
+        return { apr: 0, outOfRange: false, error: 'Invalid price range' };
     }
 
     // Skip if current price is outside range
     if (currentPrice < effectivePriceLow || currentPrice > effectivePriceHigh) {
+        console.log('[APR] Out of range:', currentPrice, 'not in', effectivePriceLow, '-', effectivePriceHigh);
         return { apr: 0, outOfRange: true };
     }
 
@@ -192,24 +209,55 @@ export async function estimateAPR({
     const sqrtPriceHigh = Math.sqrt(effectivePriceHigh);
     const sqrtPriceCurrent = Math.sqrt(currentPrice);
 
-    const amountInToken0 = depositAmount / 2 / currentPrice;
-    const amountInToken1 = depositAmount / 2;
+    // Validate sqrt calculations
+    if (sqrtPriceHigh - sqrtPriceCurrent <= 0 || sqrtPriceCurrent - sqrtPriceLow <= 0) {
+        console.warn('[APR] Price too close to bounds, edge case');
+        return { apr: 0, outOfRange: true, error: 'Price at range boundary' };
+    }
+
+    // Calculate token amounts based on token ordering
+    let amountInToken0: number;
+    let amountInToken1: number;
+
+    if (isTokenAStable) {
+        // For stable token_a (e.g., USDC/WBTC where USDC is token_a):
+        // - token_a (USDC) gets half the deposit directly
+        // - token_b (BTC) gets half the deposit divided by USD price
+        const usdPrice = 1 / currentPrice;  // Convert SDK price to USD-per-token
+        amountInToken0 = depositAmount / 2;  // USDC amount in raw units
+        amountInToken1 = (depositAmount / 2) / usdPrice;  // BTC amount = USD / (USD per BTC)
+    } else {
+        // Normal ordering (e.g., SAIL/USDC where SAIL is token_a)
+        amountInToken0 = (depositAmount / 2) / currentPrice;
+        amountInToken1 = depositAmount / 2;
+    }
 
     const liquidityFromToken0 = amountInToken0 * sqrtPriceCurrent * sqrtPriceHigh / (sqrtPriceHigh - sqrtPriceCurrent);
     const liquidityFromToken1 = amountInToken1 / (sqrtPriceCurrent - sqrtPriceLow);
 
-    const liquidity = Math.min(liquidityFromToken0, liquidityFromToken1);
+    // Take the min liquidity, but ensure it's positive
+    const liquidity = Math.min(Math.abs(liquidityFromToken0), Math.abs(liquidityFromToken1));
+
+    if (liquidity <= 0 || !isFinite(liquidity)) {
+        console.warn('[APR] Invalid liquidity calculation:', { liquidityFromToken0, liquidityFromToken1, liquidity });
+        return { apr: 0, outOfRange: false, error: 'Liquidity calculation failed' };
+    }
+
     const liquidityBigInt = BigInt(Math.floor(liquidity * 1e9));
 
     // Calculate token amounts for position
-    const amountA = BigInt(Math.floor(amountInToken0 * Math.pow(10, decimalsA)));
-    const amountB = BigInt(Math.floor(amountInToken1 * Math.pow(10, decimalsB)));
+    const amountA = BigInt(Math.floor(Math.abs(amountInToken0) * Math.pow(10, decimalsA)));
+    const amountB = BigInt(Math.floor(Math.abs(amountInToken1) * Math.pow(10, decimalsB)));
 
-    // Create sail coin object
-    const sailCoin = {
-        current_price: sailPrice,
-        decimals: 9,
-    };
+    console.log('[APR Debug]', pool.name, {
+        sdkPrice,
+        isTokenAStable,
+        effectivePriceLow,
+        effectivePriceHigh,
+        liquidity: liquidity.toExponential(3),
+        amountA: amountA.toString(),
+        amountB: amountB.toString(),
+    });
 
     try {
         const estimatedApr = PositionUtils.estimateAprByLiquidity({
@@ -217,15 +265,16 @@ export async function estimateAPR({
             positionActiveLiquidity: liquidityBigInt,
             positionAmountA: amountA,
             positionAmountB: amountB,
-            sailPrice: sailCoin.current_price,
-            oSailDecimals: sailCoin.decimals,
+            sailPrice: sailPrice,
+            oSailDecimals: 9,
             rewardChoice: rewardChoice as any,
             isNewPosition: true,
         });
 
+        console.log('[APR Result]', pool.name, estimatedApr);
         return { apr: estimatedApr, outOfRange: false };
     } catch (error) {
-        console.error('APR estimation error:', error);
+        console.error('[APR Error]', pool.name, error);
         return { apr: 0, outOfRange: false, error: String(error) };
     }
 }

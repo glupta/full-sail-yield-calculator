@@ -38,6 +38,7 @@ export default function ScenarioPanel({
     const [sdkAPR, setSdkAPR] = useState(null);
     const [sailPrice, setSailPrice] = useState(0.01);
     const [isCalculatingAPR, setIsCalculatingAPR] = useState(false);
+    const [aprError, setAprError] = useState(null);
     const sailPriceRef = useRef(0.01);
 
     const pool = scenario.pool;
@@ -80,6 +81,7 @@ export default function ScenarioPanel({
         if (!pool?.id || !scenario.priceRangeLow || !scenario.priceRangeHigh || !scenario.depositAmount) {
             setSdkAPR(null);
             setIsCalculatingAPR(false);
+            setAprError(null);
             return;
         }
 
@@ -91,12 +93,14 @@ export default function ScenarioPanel({
             if (cancelled) return;
 
             setIsCalculatingAPR(true);
+            setAprError(null);
 
             // Add timeout to prevent hanging
             const timeoutId = setTimeout(() => {
                 if (!cancelled) {
                     console.warn('SDK APR calculation timed out');
                     setSdkAPR(null);
+                    setAprError('Timeout');
                     setIsCalculatingAPR(false);
                 }
             }, 10000); // 10 second timeout
@@ -110,14 +114,24 @@ export default function ScenarioPanel({
             }).then(result => {
                 clearTimeout(timeoutId);
                 if (!cancelled) {
-                    console.log('[APR Update]', result.apr, 'for pool:', pool.name);
-                    setSdkAPR(result.apr);
+                    console.log('[APR Update]', result.apr, 'for pool:', pool.name, 'outOfRange:', result.outOfRange);
+                    if (result.error) {
+                        setAprError(result.error);
+                        setSdkAPR(null);
+                    } else if (result.outOfRange) {
+                        setAprError('Out of range');
+                        setSdkAPR(0);
+                    } else {
+                        setAprError(null);
+                        setSdkAPR(result.apr);
+                    }
                     setIsCalculatingAPR(false);
                 }
             }).catch((err) => {
                 clearTimeout(timeoutId);
                 if (!cancelled) {
                     console.error('[APR Error]', err);
+                    setAprError(err.message || 'API Error');
                     setSdkAPR(null);
                     setIsCalculatingAPR(false);
                 }
@@ -474,7 +488,7 @@ export default function ScenarioPanel({
                             <label className="price-range-field-label">
                                 Estimated APR
                                 <Tooltip text="Projected annual percentage return based on current emissions and your price range concentration." />
-                                {scenario.aprOverride === null && sdkAPR !== null && !isCalculatingAPR && (
+                                {scenario.aprOverride === null && sdkAPR !== null && !isCalculatingAPR && !aprError && (
                                     <span style={{
                                         marginLeft: '6px',
                                         fontSize: '0.65rem',
@@ -484,6 +498,14 @@ export default function ScenarioPanel({
                                 )}
                                 {isCalculatingAPR && (
                                     <Loader2 size={12} className="loading-spinner" style={{ marginLeft: '6px' }} />
+                                )}
+                                {aprError && !isCalculatingAPR && (
+                                    <span style={{
+                                        marginLeft: '6px',
+                                        fontSize: '0.65rem',
+                                        color: 'var(--color-warning)',
+                                        opacity: 0.9
+                                    }}>({aprError})</span>
                                 )}
                             </label>
                             <div style={{ position: 'relative' }}>
@@ -509,9 +531,10 @@ export default function ScenarioPanel({
                                         width: '100%',
                                         paddingRight: '28px',
                                         opacity: isCalculatingAPR ? 0.6 : 1,
-                                        transition: 'opacity 0.2s ease'
+                                        transition: 'opacity 0.2s ease',
+                                        borderColor: aprError && !isCalculatingAPR ? 'var(--color-warning)' : undefined
                                     }}
-                                    placeholder={isCalculatingAPR ? 'Calculating...' : 'Loading...'}
+                                    placeholder={isCalculatingAPR ? 'Calculating...' : (aprError ? 'Enter manually' : 'Loading...')}
                                 />
                                 <span style={{
                                     position: 'absolute',
@@ -523,7 +546,7 @@ export default function ScenarioPanel({
                                     pointerEvents: 'none'
                                 }}>%</span>
                             </div>
-                            {scenario.aprOverride !== null && sdkAPR !== null && (
+                            {scenario.aprOverride !== null && sdkAPR !== null && sdkAPR > 0 && (
                                 <button
                                     onClick={() => onChange({ aprOverride: null })}
                                     style={{

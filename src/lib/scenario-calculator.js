@@ -142,6 +142,15 @@ export function calculateScenarioResults(scenario, effectiveAPR = null) {
         // Blend based on lock percentage for display
         sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
 
+        console.log('[Scenario APR Debug]', {
+            effectiveAPR,
+            lockPct,
+            redeemAPR,
+            lockAPR,
+            sailAPR,
+            poolName: pool.name
+        });
+
         // Calculate SAIL values directly from APR (not through getEmissionValue)
         // This ensures the yield breakdown matches the input APR
         const annualRedeemValue = scenario.depositAmount * (redeemAPR / 100);
@@ -185,14 +194,25 @@ export function calculateScenarioResults(scenario, effectiveAPR = null) {
         strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
     }
 
-    // Calculate external rewards (SUI incentives, etc.) - scaled by leverage like SAIL emissions
-    const { externalRewards, externalRewardsValue } = calculateExternalRewards(
-        pool.rewards,
-        scenario.depositAmount,
-        scenario.timeline,
-        leverageMultiplier,
-        timeInRangeFraction
-    );
+    // Calculate external rewards (SUI incentives, etc.)
+    // When SDK APR is used (effectiveAPR is set), it ALREADY includes all rewards with proper concentration adjustment
+    // So we only add external rewards when using the fallback emission-based calculation
+    let externalRewards = [];
+    let externalRewardsValue = 0;
+
+    if (effectiveAPR === null || effectiveAPR <= 0) {
+        // Fallback mode: calculate external rewards separately with leverage adjustment
+        const externalRewardsResult = calculateExternalRewards(
+            pool.rewards,
+            scenario.depositAmount,
+            scenario.timeline,
+            leverageMultiplier,
+            timeInRangeFraction
+        );
+        externalRewards = externalRewardsResult.externalRewards;
+        externalRewardsValue = externalRewardsResult.externalRewardsValue;
+    }
+    // When using SDK APR, external rewards are already included in the effectiveAPR
 
     // Calculate IL using concentrated liquidity math
     // For concentrated positions, IL is calculated using actual position value formulas
