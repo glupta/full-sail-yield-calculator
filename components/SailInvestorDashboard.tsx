@@ -337,9 +337,8 @@ export default function SailInvestorDashboard() {
                     />
                     <MetricRow
                         label="Fee/Emission"
-                        value={metrics.feeEmissionRatio.toFixed(1) + 'x'}
-                        valueColor={metrics.feeEmissionRatio >= 1 ? 'var(--color-success)' : 'var(--color-warning)'}
-                        tooltip="Ratio of fees earned to emissions spent. >1 = sustainable, <1 = subsidizing growth"
+                        value={metrics.feeEmissionRatio.toFixed(2) + 'x'}
+                        tooltip="Ratio of weekly fees distributed to weekly emission value"
                     />
                 </div>
 
