@@ -79,24 +79,37 @@ export async function fetchGaugePools() {
 }
 
 /**
- * Fetch a single pool by ID
+ * Fetch a single pool by ID (raw SDK format, needed for APR calculation)
  */
 export async function fetchPoolById(poolId: string) {
+    const sdk = getSDK();
+
+    // First, try getById
     try {
-        const sdk = getSDK();
         const pool = await sdk.Pool.getById(poolId);
         if (pool) return pool;
     } catch (error) {
-        console.warn('getById failed, falling back to pool list:', error);
+        console.warn('getById failed:', error);
     }
 
-    // Fallback: search in full pool list
+    // Fallback: search in RAW pool list (not normalized) to preserve all SDK fields
     try {
-        const pools = await fetchGaugePools();
-        const pool = pools.find((p: any) => p.id === poolId || p.address === poolId);
-        if (pool) return pool;
+        const result = await sdk.Pool.getList({
+            filter: [{
+                filter_parameter: 'with_gauge',
+                filter_type: 'accept',
+                value_group: 'none'
+            }],
+            pagination: { page: 0, page_size: 100 },
+        });
+
+        const pool = (result.pools || []).find((p: any) => p.address === poolId);
+        if (pool) {
+            console.log('Found pool in raw list:', pool.name);
+            return pool;
+        }
     } catch (error) {
-        console.error('Pool list fallback also failed:', error);
+        console.error('Raw pool list fallback also failed:', error);
     }
 
     return null;
@@ -143,7 +156,7 @@ export async function estimateAPR({
     rewardChoice?: 'liquid' | 'vesail';
     sailPrice: number;
 }) {
-    // Get current price
+    // Get current price from sqrt_price (SDK's native format)
     const token0 = pool.token_a;
     const token1 = pool.token_b;
     const decimalsA = token0?.decimals || 9;
@@ -151,16 +164,32 @@ export async function estimateAPR({
 
     const sqrtPrice = BigInt(pool.current_sqrt_price || 0);
     const rawPrice = Number(sqrtPrice * sqrtPrice) / (2 ** 128);
-    const currentPrice = rawPrice * Math.pow(10, decimalsA - decimalsB);
+    const sdkPrice = rawPrice * Math.pow(10, decimalsA - decimalsB);
+
+    // Detect if the UI price is inverted relative to SDK price
+    // If SDK price is > 1 and input prices are < 1, they're inverted
+    const inputMidpoint = (priceLow + priceHigh) / 2;
+    const pricesAreInverted = (sdkPrice > 1 && inputMidpoint < 1) || (sdkPrice < 1 && inputMidpoint > 1);
+
+    // Use SDK's native price format for calculation
+    let currentPrice = sdkPrice;
+    let effectivePriceLow = priceLow;
+    let effectivePriceHigh = priceHigh;
+
+    if (pricesAreInverted) {
+        // Convert UI price range to SDK format: invert and swap low/high
+        effectivePriceLow = 1 / priceHigh;  // UI high becomes SDK low when inverted
+        effectivePriceHigh = 1 / priceLow;  // UI low becomes SDK high when inverted
+    }
 
     // Skip if current price is outside range
-    if (currentPrice < priceLow || currentPrice > priceHigh) {
+    if (currentPrice < effectivePriceLow || currentPrice > effectivePriceHigh) {
         return { apr: 0, outOfRange: true };
     }
 
     // Calculate liquidity using CLMM formula
-    const sqrtPriceLow = Math.sqrt(priceLow);
-    const sqrtPriceHigh = Math.sqrt(priceHigh);
+    const sqrtPriceLow = Math.sqrt(effectivePriceLow);
+    const sqrtPriceHigh = Math.sqrt(effectivePriceHigh);
     const sqrtPriceCurrent = Math.sqrt(currentPrice);
 
     const amountInToken0 = depositAmount / 2 / currentPrice;

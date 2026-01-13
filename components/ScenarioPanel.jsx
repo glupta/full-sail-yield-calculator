@@ -95,9 +95,8 @@ export default function ScenarioPanel({
             // Add timeout to prevent hanging
             const timeoutId = setTimeout(() => {
                 if (!cancelled) {
-                    console.warn('SDK APR calculation timed out, using fallback');
-                    // Fallback to pool.full_apr if SDK times out
-                    setSdkAPR(pool?.full_apr || null);
+                    console.warn('SDK APR calculation timed out');
+                    setSdkAPR(null);
                     setIsCalculatingAPR(false);
                 }
             }, 10000); // 10 second timeout
@@ -112,21 +111,14 @@ export default function ScenarioPanel({
                 clearTimeout(timeoutId);
                 if (!cancelled) {
                     console.log('[APR Update]', result.apr, 'for pool:', pool.name);
-                    // If SDK returns very low APR but pool has a reasonable full_apr, use that as fallback
-                    if (result.apr < 0.1 && pool?.full_apr > 1) {
-                        console.log('[APR Fallback] Using pool.full_apr:', pool.full_apr);
-                        setSdkAPR(pool.full_apr);
-                    } else {
-                        setSdkAPR(result.apr);
-                    }
+                    setSdkAPR(result.apr);
                     setIsCalculatingAPR(false);
                 }
             }).catch((err) => {
                 clearTimeout(timeoutId);
                 if (!cancelled) {
                     console.error('[APR Error]', err);
-                    // Fallback to pool.full_apr on error
-                    setSdkAPR(pool?.full_apr || null);
+                    setSdkAPR(null);
                     setIsCalculatingAPR(false);
                 }
             });
