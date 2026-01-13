@@ -284,10 +284,11 @@ export default function VeSailMarketPanel() {
                             paddingBottom: 'var(--space-xs)',
                             borderBottom: '1px solid var(--border-subtle)'
                         }}>
-                            <span style={{ minWidth: '60px' }}>Date</span>
-                            <span style={{ minWidth: '60px', textAlign: 'right' }}>Price</span>
-                            <span style={{ minWidth: '50px', textAlign: 'right' }}>SAIL</span>
-                            <span style={{ minWidth: '45px', textAlign: 'right' }}>vs Spot</span>
+                            <span style={{ minWidth: '55px' }}>Date</span>
+                            <span style={{ minWidth: '55px', textAlign: 'right' }}>Price</span>
+                            <span style={{ minWidth: '45px', textAlign: 'right' }}>SAIL</span>
+                            <span style={{ minWidth: '40px', textAlign: 'right' }}>vs Spot</span>
+                            <span style={{ minWidth: '45px', textAlign: 'right' }}>Lock</span>
                         </div>
                         <div style={{ fontSize: '0.8rem' }}>
                             {recentSales.slice(0, 5).map((sale, i) => (
@@ -296,27 +297,39 @@ export default function VeSailMarketPanel() {
                                     style={{
                                         display: 'flex',
                                         justifyContent: 'space-between',
+                                        alignItems: 'center',
                                         padding: 'var(--space-xs) 0',
                                         borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none'
                                     }}
                                 >
-                                    <span style={{ color: 'var(--text-muted)', minWidth: '60px' }}>
+                                    <span style={{ color: 'var(--text-muted)', minWidth: '55px' }}>
                                         {new Date(sale.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
-                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '60px', textAlign: 'right' }}>
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '55px', textAlign: 'right' }}>
                                         {sale.priceSui.toFixed(1)} SUI
                                     </span>
-                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '50px', textAlign: 'right' }}>
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '45px', textAlign: 'right' }}>
                                         {sale.lockedSail >= 1000 ? `${(sale.lockedSail / 1000).toFixed(1)}K` : sale.lockedSail.toFixed(0)}
                                     </span>
                                     <span style={{
                                         fontFamily: 'var(--font-mono)',
                                         color: sale.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)',
-                                        minWidth: '45px',
+                                        minWidth: '40px',
                                         textAlign: 'right'
                                     }}>
                                         {sale.discountPct > 0 ? '-' : '+'}
                                         {Math.abs(sale.discountPct).toFixed(0)}%
+                                    </span>
+                                    <span style={{
+                                        background: sale.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)',
+                                        color: sale.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '0.65rem',
+                                        minWidth: '45px',
+                                        textAlign: 'center'
+                                    }}>
+                                        {sale.lockType}
                                     </span>
                                 </div>
                             ))}
