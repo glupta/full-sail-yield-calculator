@@ -13,12 +13,15 @@ const DEFAULT_VOLATILITY = 0.8;
 
 /**
  * Calculate external rewards (SUI incentives, etc.) from pool.rewards array
+ * Rewards scale with leverage - concentrated positions capture a larger share of incentives
  * @param {object[]} rewards - Array of reward objects with { token, apr, ... }
  * @param {number} depositAmount - User's deposit in USD
  * @param {number} timeline - Timeline in days
+ * @param {number} leverageMultiplier - Multiplier based on price range concentration (default: 1)
+ * @param {number} timeInRangeFraction - Fraction of time position is in range (default: 1)
  * @returns {object} - External rewards breakdown
  */
-function calculateExternalRewards(rewards, depositAmount, timeline) {
+function calculateExternalRewards(rewards, depositAmount, timeline, leverageMultiplier = 1, timeInRangeFraction = 1) {
     if (!rewards || !Array.isArray(rewards) || rewards.length === 0) {
         return { externalRewards: [], externalRewardsValue: 0 };
     }
@@ -27,9 +30,11 @@ function calculateExternalRewards(rewards, depositAmount, timeline) {
         .filter(r => r.token && r.apr) // Filter valid rewards
         .map(reward => {
             // APR is in percentage (e.g., 50 = 50%)
-            const apr = reward.apr || 0;
-            const dailyRate = apr / 100 / 365;
-            const projectedValue = depositAmount * dailyRate * timeline;
+            // Apply leverage multiplier - concentrated positions earn proportionally more rewards
+            const baseApr = reward.apr || 0;
+            const leveragedApr = baseApr * leverageMultiplier;
+            const dailyRate = leveragedApr / 100 / 365;
+            const projectedValue = depositAmount * dailyRate * timeline * timeInRangeFraction;
 
             // Handle both string tokens (e.g., "0x...::module::TOKEN") and object tokens (e.g., { symbol: "SUI" })
             let tokenName = 'Unknown';
@@ -43,7 +48,7 @@ function calculateExternalRewards(rewards, depositAmount, timeline) {
 
             return {
                 token: tokenName,
-                apr: apr,
+                apr: leveragedApr, // Return leveraged APR for display
                 projectedValue,
             };
         });
@@ -167,11 +172,13 @@ export function calculateScenarioResults(scenario, effectiveAPR = null) {
     // Calculate strategy value
     const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
 
-    // Calculate external rewards (SUI incentives, etc.)
+    // Calculate external rewards (SUI incentives, etc.) - scaled by leverage like SAIL emissions
     const { externalRewards, externalRewardsValue } = calculateExternalRewards(
         pool.rewards,
         scenario.depositAmount,
-        scenario.timeline
+        scenario.timeline,
+        leverageMultiplier,
+        timeInRangeFraction
     );
 
     // Calculate IL using concentrated liquidity math

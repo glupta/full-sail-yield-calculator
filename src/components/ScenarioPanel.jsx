@@ -66,46 +66,53 @@ export default function ScenarioPanel({
         }
 
         let cancelled = false;
-        setIsCalculatingAPR(true);
 
-        // Use the latest sail price (from ref to avoid stale closure)
-        const currentSailPrice = sailPriceRef.current > 0.01 ? sailPriceRef.current : sailPrice;
+        // Debounce: wait 500ms after last change before calculating
+        // This prevents excessive API calls while user is typing
+        const debounceId = setTimeout(() => {
+            if (cancelled) return;
 
-        // Add timeout to prevent hanging
-        const timeoutId = setTimeout(() => {
-            if (!cancelled) {
-                console.warn('SDK APR calculation timed out');
-                setSdkAPR(null);
-                setIsCalculatingAPR(false);
-            }
-        }, 10000); // 10 second timeout
+            setIsCalculatingAPR(true);
 
-        calculateEstimatedAPRFromSDK({
-            pool,
-            priceLow: scenario.priceRangeLow,
-            priceHigh: scenario.priceRangeHigh,
-            depositAmount: scenario.depositAmount,
-            rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
-            sailPrice: currentSailPrice,
-        }).then(apr => {
-            clearTimeout(timeoutId);
-            if (!cancelled) {
-                console.log('[APR Update]', apr, 'for pool:', pool.name);
-                setSdkAPR(apr);
-                setIsCalculatingAPR(false);
-            }
-        }).catch((err) => {
-            clearTimeout(timeoutId);
-            if (!cancelled) {
-                console.error('[APR Error]', err);
-                setSdkAPR(null);
-                setIsCalculatingAPR(false);
-            }
-        });
+            // Use the latest sail price (from ref to avoid stale closure)
+            const currentSailPrice = sailPriceRef.current > 0.01 ? sailPriceRef.current : sailPrice;
+
+            // Add timeout to prevent hanging
+            const timeoutId = setTimeout(() => {
+                if (!cancelled) {
+                    console.warn('SDK APR calculation timed out');
+                    setSdkAPR(null);
+                    setIsCalculatingAPR(false);
+                }
+            }, 10000); // 10 second timeout
+
+            calculateEstimatedAPRFromSDK({
+                pool,
+                priceLow: scenario.priceRangeLow,
+                priceHigh: scenario.priceRangeHigh,
+                depositAmount: scenario.depositAmount,
+                rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
+                sailPrice: currentSailPrice,
+            }).then(apr => {
+                clearTimeout(timeoutId);
+                if (!cancelled) {
+                    console.log('[APR Update]', apr, 'for pool:', pool.name);
+                    setSdkAPR(apr);
+                    setIsCalculatingAPR(false);
+                }
+            }).catch((err) => {
+                clearTimeout(timeoutId);
+                if (!cancelled) {
+                    console.error('[APR Error]', err);
+                    setSdkAPR(null);
+                    setIsCalculatingAPR(false);
+                }
+            });
+        }, 500); // 500ms debounce delay
 
         return () => {
             cancelled = true;
-            clearTimeout(timeoutId);
+            clearTimeout(debounceId);
         };
     }, [poolKey, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
 
@@ -324,7 +331,8 @@ export default function ScenarioPanel({
                                         );
                                         onChange({
                                             priceRangeLow: roundToSigFigs(range.priceLow, 4),
-                                            priceRangeHigh: roundToSigFigs(range.priceHigh, 4)
+                                            priceRangeHigh: roundToSigFigs(range.priceHigh, 4),
+                                            aprOverride: null
                                         });
                                     }
                                 }}
@@ -347,7 +355,7 @@ export default function ScenarioPanel({
                                 className="price-stepper-mini"
                                 onClick={() => {
                                     if (scenario.priceRangeLow) {
-                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 0.99, 4) });
+                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 0.99, 4), aprOverride: null });
                                     }
                                 }}
                                 disabled={!scenario.priceRangeLow}
@@ -359,11 +367,11 @@ export default function ScenarioPanel({
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     if (val === '' || val === null) {
-                                        onChange({ priceRangeLow: null });
+                                        onChange({ priceRangeLow: null, aprOverride: null });
                                     } else {
                                         const numVal = parseFloat(val);
                                         if (!isNaN(numVal)) {
-                                            onChange({ priceRangeLow: numVal });
+                                            onChange({ priceRangeLow: numVal, aprOverride: null });
                                         }
                                     }
                                 }}
@@ -374,7 +382,7 @@ export default function ScenarioPanel({
                                 className="price-stepper-mini"
                                 onClick={() => {
                                     if (scenario.priceRangeLow) {
-                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 1.01, 4) });
+                                        onChange({ priceRangeLow: roundToSigFigs(scenario.priceRangeLow * 1.01, 4), aprOverride: null });
                                     }
                                 }}
                                 disabled={!scenario.priceRangeLow}
@@ -398,7 +406,7 @@ export default function ScenarioPanel({
                                 className="price-stepper-mini"
                                 onClick={() => {
                                     if (scenario.priceRangeHigh) {
-                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 0.99, 4) });
+                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 0.99, 4), aprOverride: null });
                                     }
                                 }}
                                 disabled={!scenario.priceRangeHigh}
@@ -410,11 +418,11 @@ export default function ScenarioPanel({
                                 onChange={(e) => {
                                     const val = e.target.value;
                                     if (val === '' || val === null) {
-                                        onChange({ priceRangeHigh: null });
+                                        onChange({ priceRangeHigh: null, aprOverride: null });
                                     } else {
                                         const numVal = parseFloat(val);
                                         if (!isNaN(numVal)) {
-                                            onChange({ priceRangeHigh: numVal });
+                                            onChange({ priceRangeHigh: numVal, aprOverride: null });
                                         }
                                     }
                                 }}
@@ -425,7 +433,7 @@ export default function ScenarioPanel({
                                 className="price-stepper-mini"
                                 onClick={() => {
                                     if (scenario.priceRangeHigh) {
-                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 1.01, 4) });
+                                        onChange({ priceRangeHigh: roundToSigFigs(scenario.priceRangeHigh * 1.01, 4), aprOverride: null });
                                     }
                                 }}
                                 disabled={!scenario.priceRangeHigh}
