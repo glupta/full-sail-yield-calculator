@@ -1,3 +1,5 @@
+// Must be first import - shims EventEmitter for browser compatibility
+import './lib/event-emitter-shim.js';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
