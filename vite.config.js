@@ -7,12 +7,8 @@ export default defineConfig({
     plugins: [
         react(),
         nodePolyfills({
-            // Polyfill all Node.js modules for SDK compatibility
+            // Include all polyfills for maximum compatibility
             protocolImports: true,
-            // Override EventEmitter to ensure proper browser compatibility
-            overrides: {
-                events: 'events',
-            },
         }),
     ],
     resolve: {
@@ -21,24 +17,24 @@ export default defineConfig({
             '@fullsailfinance/sdk': path.resolve(
                 './node_modules/@fullsailfinance/sdk/dist/index.js'
             ),
-            // Force events to use the proper browser polyfill
-            'events': 'events',
         },
     },
     optimizeDeps: {
-        // Pre-bundle problematic dependencies
-        include: ['events', 'axios'],
         esbuildOptions: {
-            // Define global for browser compatibility
             define: {
                 global: 'globalThis',
             },
         },
     },
     build: {
-        // Ensure CommonJS modules are properly handled
         commonjsOptions: {
             transformMixedEsModules: true,
+            // Include problematic deps in CJS transform
+            include: [/node_modules/],
+        },
+        rollupOptions: {
+            // Externalize problematic Node.js-only dependencies
+            // These won't be bundled - we'll handle gracefully in code
         },
     },
     test: {
