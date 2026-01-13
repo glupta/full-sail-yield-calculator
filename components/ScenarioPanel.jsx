@@ -223,7 +223,7 @@ export default function ScenarioPanel({
                         value={pool?.id || ''}
                         onChange={(e) => {
                             const selected = pools.find(p => p.id === e.target.value);
-                            onChange({ pool: selected, exitPrice: null, priceRangeLow: null, priceRangeHigh: null });
+                            onChange({ pool: selected, exitPrice: null });
                         }}
                         style={{ width: '100%' }}
                     >

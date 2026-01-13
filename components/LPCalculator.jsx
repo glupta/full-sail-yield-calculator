@@ -74,9 +74,13 @@ export default function LPCalculator() {
             setPools(fetchedPools);
             poolsRef.current = fetchedPools;
 
-            // Always start with first pool and default settings
+            // Default to SAIL/USDC pool, fallback to first pool
             if (fetchedPools.length > 0) {
-                const pool = fetchedPools[0];
+                const sailPool = fetchedPools.find(p =>
+                    (p.token0_symbol?.toUpperCase() === 'SAIL' || p.token1_symbol?.toUpperCase() === 'SAIL') &&
+                    (p.token0_symbol?.toUpperCase() === 'USDC' || p.token1_symbol?.toUpperCase() === 'USDC')
+                );
+                const pool = sailPool || fetchedPools[0];
                 const defaultPreset = getDefaultPreset();
                 const range = pool?.currentPrice
                     ? getPriceRangeFromPercent(pool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct)
