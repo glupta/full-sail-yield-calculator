@@ -5,7 +5,6 @@
  * Clean, focused investor metrics with placeholder data styled distinctly
  */
 import { useState, useEffect } from 'react';
-import { loadInputs, saveInputs } from '@/lib/persistence';
 import { fetchSailMetrics, SailInvestorMetrics } from '@/lib/api-client';
 import {
     TrendingUp,
@@ -13,7 +12,6 @@ import {
     DollarSign,
     Activity,
     Wallet,
-    Calculator,
     RefreshCw,
     BarChart3,
     Zap,
@@ -159,21 +157,6 @@ export default function SailInvestorDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [calcInputs, setCalcInputs] = useState({
-        sailAmount: 10000,
-        lockDuration: 4,
-        timeline: 30,
-    });
-
-    useEffect(() => {
-        const saved = loadInputs('token_buyer');
-        if (saved) setCalcInputs(saved);
-    }, []);
-
-    useEffect(() => {
-        saveInputs('token_buyer', calcInputs);
-    }, [calcInputs]);
-
     const fetchData = async () => {
         setLoading(true);
         setError(null);
@@ -190,10 +173,6 @@ export default function SailInvestorDashboard() {
     useEffect(() => {
         fetchData();
     }, []);
-
-    const updateCalc = (key: string, value: number) => {
-        setCalcInputs(prev => ({ ...prev, [key]: value }));
-    };
 
     if (loading) {
         return (
@@ -217,12 +196,6 @@ export default function SailInvestorDashboard() {
             </div>
         );
     }
-
-    // Calculator derived values
-    const sailValue = calcInputs.sailAmount * metrics.sailPrice;
-    const projectedRewards = sailValue * metrics.votingApr * calcInputs.timeline / 365;
-    const dailyReward = sailValue * metrics.votingApr / 365;
-    const timeToRecoup = dailyReward > 0 ? sailValue / dailyReward : Infinity;
 
     return (
         <div role="tabpanel" id="panel-sail" aria-labelledby="tab-sail" className="animate-in">
@@ -404,89 +377,6 @@ export default function SailInvestorDashboard() {
                         isPlaceholder={true}
                         tooltip="Price × Circulating Supply. Requires supply data."
                     />
-                </div>
-
-                {/* Yield Calculator */}
-                <div className="glass-card" style={{
-                    background: 'linear-gradient(135deg, rgba(0, 160, 255, 0.06) 0%, rgba(10, 22, 40, 0.95) 100%)',
-                    border: '1px solid rgba(0, 160, 255, 0.15)',
-                }}>
-                    <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem' }}>
-                        <Calculator size={18} style={{ color: 'var(--color-primary)' }} />
-                        Calculator
-                    </h3>
-
-                    <div className="mb-md">
-                        <label className="text-muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>
-                            SAIL Amount
-                        </label>
-                        <input
-                            type="number"
-                            value={calcInputs.sailAmount}
-                            onChange={(e) => updateCalc('sailAmount', Number(e.target.value))}
-                            style={{ width: '100%' }}
-                        />
-                        <div className="text-muted" style={{ fontSize: '0.65rem', marginTop: '4px' }}>
-                            ≈ {formatUsd(sailValue)}
-                        </div>
-                    </div>
-
-                    <div className="mb-md">
-                        <label className="text-muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>
-                            Lock
-                        </label>
-                        <div className="flex gap-sm">
-                            {[1, 2, 4].map(years => (
-                                <button
-                                    key={years}
-                                    className={`btn ${calcInputs.lockDuration === years ? 'btn-primary' : 'btn-secondary'}`}
-                                    onClick={() => updateCalc('lockDuration', years)}
-                                    style={{ flex: 1, fontSize: '0.85rem' }}
-                                >
-                                    {years}Y
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="mb-lg">
-                        <label className="text-muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>
-                            Period
-                        </label>
-                        <div className="flex gap-sm">
-                            {[30, 90, 365].map(days => (
-                                <button
-                                    key={days}
-                                    className={`btn ${calcInputs.timeline === days ? 'btn-primary' : 'btn-secondary'}`}
-                                    onClick={() => updateCalc('timeline', days)}
-                                    style={{ flex: 1, fontSize: '0.85rem' }}
-                                >
-                                    {days === 365 ? '1Y' : `${days}D`}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-md)' }}>
-                        <MetricRow
-                            label={`Rewards (${calcInputs.timeline}d)`}
-                            value={formatUsd(projectedRewards)}
-                            valueColor="var(--color-success)"
-                            tooltip="Projected voting rewards over your selected time period"
-                        />
-                        <MetricRow
-                            label="Return"
-                            value={sailValue > 0 ? formatPercent(projectedRewards / sailValue) : '0%'}
-                            tooltip="Percentage return on your locked SAIL over the period"
-                        />
-                        <MetricRow
-                            label="Recoup"
-                            value={timeToRecoup === Infinity ? '∞' :
-                                timeToRecoup < 365 ? `${Math.round(timeToRecoup)}d` :
-                                    `${(timeToRecoup / 365).toFixed(1)}y`}
-                            tooltip="Time until voting rewards equal your initial SAIL investment"
-                        />
-                    </div>
                 </div>
             </div>
 
