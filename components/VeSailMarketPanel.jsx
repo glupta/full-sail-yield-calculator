@@ -82,9 +82,6 @@ export default function VeSailMarketPanel() {
                 <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>veSAIL Secondary Market</h2>
-                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            Buy veSAIL positions on Tradeport
-                        </p>
                     </div>
                     <div className="flex items-center gap-sm">
                         <span style={{
