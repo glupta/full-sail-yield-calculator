@@ -20,3 +20,5 @@ dist/
 # Coverage
 coverage/
 .vercel
+.next
+nextjs-temp
