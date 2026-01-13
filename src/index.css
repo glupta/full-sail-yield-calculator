@@ -1917,7 +1917,8 @@ input[type="number"] {
   }
 }
 
-.loading-spinner {
+.loading-spinner,
+.spin {
   animation: spin 1s linear infinite;
   color: var(--color-primary);
 }

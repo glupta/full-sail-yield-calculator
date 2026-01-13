@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
-import { X, CheckCircle, ChevronDown, HelpCircle } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { X, CheckCircle, ChevronDown, HelpCircle, Loader2 } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
-import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
+import { RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
+import { calculateEstimatedAPRFromSDK } from '../lib/sdk';
 import { roundToSigFigs } from '../lib/formatters';
 import PoolAnalyticsPanel from './PoolAnalyticsPanel';
 
@@ -36,19 +37,62 @@ export default function ScenarioPanel({
 
     const pool = scenario.pool;
 
-    // Calculate rangeAPR first (needed for defaultAPR)
-    const rangeAPR = useMemo(() => {
-        if (!pool?.full_apr || !pool?.currentPrice) return null;
-        const priceLow = scenario.priceRangeLow;
-        const priceHigh = scenario.priceRangeHigh;
-        if (!priceLow || !priceHigh) return null;
-        return calculateRangeAPR(pool.full_apr, pool.currentPrice, priceLow, priceHigh);
-    }, [pool?.full_apr, pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
+    // SDK-based APR calculation with async state
+    const [sdkAPR, setSdkAPR] = useState(null);
+    const [isLoadingAPR, setIsLoadingAPR] = useState(false);
 
-    // Default APR is full_apr adjusted by leverage
-    const defaultAPR = rangeAPR?.estimatedAPR ?? null;
+    // Trigger SDK APR calculation when inputs change
+    useEffect(() => {
+        console.log('[APR Effect Triggered]', {
+            poolName: pool?.name,
+            priceRangeLow: scenario.priceRangeLow,
+            priceRangeHigh: scenario.priceRangeHigh,
+            hasPool: !!pool,
+            hasSqrtPrice: !!pool?.current_sqrt_price
+        });
 
-    // Effective APR: user override > default (full_apr * leverage)
+        // Skip if missing required inputs
+        if (!pool?.current_sqrt_price || !scenario.priceRangeLow || !scenario.priceRangeHigh) {
+            setSdkAPR(null);
+            return;
+        }
+
+        let cancelled = false;
+        setSdkAPR(null); // Reset to trigger loading state in input field
+        setIsLoadingAPR(true);
+
+        (async () => {
+            try {
+                const apr = await calculateEstimatedAPRFromSDK({
+                    pool,
+                    priceLow: scenario.priceRangeLow,
+                    priceHigh: scenario.priceRangeHigh,
+                    depositAmount: scenario.depositAmount || 10000,
+                    rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
+                });
+
+                if (!cancelled) {
+                    setSdkAPR(apr);
+                }
+            } catch (e) {
+                console.error('APR calculation failed:', e);
+                if (!cancelled) {
+                    setSdkAPR(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingAPR(false);
+                }
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [pool?.id, pool?.current_sqrt_price, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy]);
+
+    // Default APR from SDK calculation
+    const defaultAPR = sdkAPR;
+
+    // Effective APR: user override > SDK-calculated default
     const effectiveAPR = scenario.aprOverride !== null ? scenario.aprOverride : defaultAPR;
 
     const results = useMemo(() => {
@@ -425,7 +469,8 @@ export default function ScenarioPanel({
                         <div className="price-range-field">
                             <label className="price-range-field-label">
                                 Estimated APR
-                                <Tooltip text="Based on pool's base APR adjusted for your price range. Actual APR varies based on other LPs' positions. Cross-check with app.fullsail.finance." />
+                                {isLoadingAPR && <Loader2 size={12} className="spin" style={{ marginLeft: '6px', opacity: 0.7 }} />}
+                                <Tooltip text="Calculated using Full Sail SDK based on current pool liquidity and emissions. Values may vary from app.fullsail.finance due to timing differences." />
                             </label>
                             <div style={{ position: 'relative' }}>
                                 <input
@@ -448,9 +493,11 @@ export default function ScenarioPanel({
                                     }}
                                     style={{
                                         width: '100%',
-                                        paddingRight: '28px'
+                                        paddingRight: '28px',
+                                        opacity: isLoadingAPR ? 0.6 : 1
                                     }}
-                                    placeholder="Enter APR"
+                                    placeholder={isLoadingAPR ? "Calculating..." : "Enter APR"}
+                                    disabled={isLoadingAPR}
                                 />
                                 <span style={{
                                     position: 'absolute',

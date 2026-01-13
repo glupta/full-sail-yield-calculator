@@ -1,25 +1,50 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PersonaToggle from './components/PersonaToggle';
 import LPCalculator from './components/LPCalculator';
 import TokenBuyerCalculator from './components/TokenBuyerCalculator';
+import VeSailMarketPanel from './components/VeSailMarketPanel';
 import { loadInputs, saveInputs } from './lib/persistence';
 import { Heart, ExternalLink } from 'lucide-react';
 
-function App() {
-    const [persona, setPersona] = useState('lp');
+const VALID_TABS = ['lp', 'buyer', 'vesail'];
 
-    // Restore persona on mount
-    useEffect(() => {
-        const saved = loadInputs('app');
-        if (saved?.persona) {
-            setPersona(saved.persona);
+function App() {
+    const [persona, setPersona] = useState(() => {
+        // Priority: URL param > localStorage > default
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabFromUrl = urlParams.get('tab');
+        if (tabFromUrl && VALID_TABS.includes(tabFromUrl)) {
+            return tabFromUrl;
         }
+        const saved = loadInputs('app');
+        if (saved?.persona && VALID_TABS.includes(saved.persona)) {
+            return saved.persona;
+        }
+        return 'lp';
+    });
+
+    // Update URL when persona changes
+    const handlePersonaChange = useCallback((newPersona) => {
+        setPersona(newPersona);
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', newPersona);
+        window.history.replaceState({}, '', url.toString());
     }, []);
 
-    // Persist persona changes
+    // Persist persona changes to localStorage
     useEffect(() => {
         saveInputs('app', { persona });
     }, [persona]);
+
+    // Sync URL on initial load if needed
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('tab') !== persona) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', persona);
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, []);
 
     return (
         <div className="animated-bg">
@@ -37,16 +62,14 @@ function App() {
 
                 {/* Navigation */}
                 <nav style={{ marginBottom: 'var(--space-xl)' }}>
-                    <PersonaToggle persona={persona} onChange={setPersona} />
+                    <PersonaToggle persona={persona} onChange={handlePersonaChange} />
                 </nav>
 
                 {/* Main Content */}
                 <main>
-                    {persona === 'lp' ? (
-                        <LPCalculator />
-                    ) : (
-                        <TokenBuyerCalculator />
-                    )}
+                    {persona === 'lp' && <LPCalculator />}
+                    {persona === 'buyer' && <TokenBuyerCalculator />}
+                    {persona === 'vesail' && <VeSailMarketPanel />}
                 </main>
 
                 {/* Footer */}

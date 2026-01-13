@@ -198,19 +198,46 @@ export async function fetchConfig() {
 }
 
 /**
+ * Cached SAIL coin object for APR calculations
+ */
+let cachedSailCoin = null;
+let sailCoinFetchPromise = null;
+
+/**
+ * Fetch SAIL coin data (with caching)
+ * @returns {Promise<object|null>} SAIL coin object with current_price and decimals
+ */
+export async function fetchSailCoin() {
+    if (cachedSailCoin) return cachedSailCoin;
+
+    // Prevent concurrent fetches
+    if (sailCoinFetchPromise) return sailCoinFetchPromise;
+
+    sailCoinFetchPromise = (async () => {
+        try {
+            const pools = await fetchGaugePools();
+            const sailPool = pools.find(p => p.name === 'SAIL/USDC');
+            // In SAIL/USDC pool, SAIL is token_b (USDC is token_a)
+            cachedSailCoin = sailPool?.token_b || null;
+            return cachedSailCoin;
+        } catch (e) {
+            console.error('Failed to fetch SAIL coin:', e);
+            return null;
+        } finally {
+            sailCoinFetchPromise = null;
+        }
+    })();
+
+    return sailCoinFetchPromise;
+}
+
+/**
  * Fetch SAIL token price from the SAIL/USDC pool
  * @returns {Promise<number>} SAIL price in USD
  */
 export async function fetchSailPrice() {
-    try {
-        const pools = await fetchGaugePools();
-        const sailPool = pools.find(p => p.name === 'SAIL/USDC');
-        // token_b is SAIL in this pool
-        return sailPool?.token_b?.current_price || 0;
-    } catch (e) {
-        console.error('Failed to fetch SAIL price:', e);
-        return 0;
-    }
+    const sailCoin = await fetchSailCoin();
+    return sailCoin?.current_price || 0;
 }
 
 /**
@@ -241,6 +268,9 @@ export async function calculateEstimatedAPRFromSDK({
         if (!pool || !priceLow || !priceHigh || !depositAmount) {
             return 0;
         }
+
+        // Auto-fetch SAIL coin if not provided
+        const effectiveSailCoin = sailCoin || await fetchSailCoin();
 
         const decimalsA = pool.token_a?.decimals ?? 9;
         const decimalsB = pool.token_b?.decimals ?? 9;
@@ -291,7 +321,7 @@ export async function calculateEstimatedAPRFromSDK({
         );
 
         // Use SDK's native estimateAprByLiquidity
-        const effectiveSailPrice = sailCoin?.current_price || legacySailPrice || 0.0026;
+        const effectiveSailPrice = effectiveSailCoin?.current_price || legacySailPrice || 0.0026;
 
         console.log('[APR Debug]', {
             poolName: pool.name,
@@ -313,7 +343,7 @@ export async function calculateEstimatedAPRFromSDK({
             positionAmountA: amountA,
             positionAmountB: amountB,
             sailPrice: effectiveSailPrice,
-            oSailDecimals: sailCoin?.decimals || 6,
+            oSailDecimals: effectiveSailCoin?.decimals || 6,
             rewardChoice: rewardChoice === 'vesail' ? 'vesail' : 'liquid',
             isNewPosition: true,
         });

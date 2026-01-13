@@ -100,3 +100,27 @@ export async function estimateAPR(params: EstimateAPRParams): Promise<EstimateAP
     }
     return res.json();
 }
+
+export interface ProtocolConfig {
+    voting_fees_usd?: number;
+    exercise_fees_usd?: number;
+    global_voting_power?: number;
+}
+
+/**
+ * Fetch Full Sail protocol config (voting fees, global voting power, etc.)
+ */
+export async function fetchConfig(): Promise<ProtocolConfig | null> {
+    try {
+        const res = await fetch('https://app.fullsail.finance/api/config');
+        if (!res.ok) {
+            console.error('Failed to fetch config:', res.status);
+            return null;
+        }
+        const data = await res.json();
+        return data.config;
+    } catch (e) {
+        console.error('Failed to fetch config:', e);
+        return null;
+    }
+}

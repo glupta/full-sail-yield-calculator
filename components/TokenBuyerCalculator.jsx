@@ -1,6 +1,8 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { loadInputs, saveInputs } from '../lib/persistence';
-import { fetchConfig, fetchSailPrice } from '../lib/sdk';
+import { loadInputs, saveInputs } from '@/lib/persistence';
+import { fetchConfig, fetchSailPrice } from '@/lib/api-client';
 import { Lock, TrendingUp, Wallet, Calculator, Clock, DollarSign } from 'lucide-react';
 
 const SAIL_DECIMALS = 6;
