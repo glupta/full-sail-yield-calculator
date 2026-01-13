@@ -322,79 +322,18 @@ export default function VeSailMarketPanel() {
                             ))}
                         </div>
                     </div>
-
-                    {/* Scatter Chart */}
-                    <div className="glass-card" style={{ flex: 1 }}>
-                        <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
-                            <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
-                            Discount vs Size
-                        </h3>
-                        {/* Legend */}
-                        <div style={{
-                            display: 'flex',
-                            gap: 'var(--space-md)',
-                            fontSize: '0.7rem',
-                            color: 'var(--text-muted)',
-                            marginTop: 'var(--space-xs)'
-                        }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-primary)' }}></span>
-                                Listings
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-success)' }}></span>
-                                Sales
-                            </span>
-                        </div>
-                        <div style={{ height: '160px', marginTop: 'var(--space-xs)' }}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
-                                    <XAxis
-                                        dataKey="lockedSail"
-                                        type="number"
-                                        name="SAIL"
-                                        domain={['dataMin', 'dataMax']}
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                                        tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : Math.round(v)}
-                                        label={{ value: 'Locked SAIL', position: 'bottom', fontSize: 10, fill: 'var(--text-muted)' }}
-                                    />
-                                    <YAxis
-                                        dataKey="discount"
-                                        type="number"
-                                        name="Discount"
-                                        domain={['dataMin', 'dataMax']}
-                                        tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                                        tickFormatter={(v) => `${v > 0 ? '-' : '+'}${Math.abs(v).toFixed(0)}%`}
-                                        width={40}
-                                    />
-                                    <ReferenceLine y={0} stroke="var(--border-default)" strokeDasharray="3 3" />
-                                    <Tooltip content={<CustomTooltip />} />
-                                    <Scatter
-                                        name="Listings"
-                                        data={listingsChartData}
-                                        fill="#00a0ff"
-                                    />
-                                    <Scatter
-                                        name="Sales"
-                                        data={salesChartData}
-                                        fill="#10b981"
-                                    />
-                                </ScatterChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             {/* Footer note */}
             <p style={{
                 textAlign: 'center',
-                fontSize: '0.75rem',
+                fontSize: '0.7rem',
                 color: 'var(--text-muted)',
-                marginTop: 'var(--space-lg)'
+                margin: 0
             }}>
                 Data from <a href="https://tradeport.xyz" target="_blank" rel="noopener noreferrer">Tradeport</a>.
-                Negative % = discount to SAIL spot. Refreshes every 5 minutes.
+                Negative % = discount to SAIL spot.
             </p>
         </div>
     );
