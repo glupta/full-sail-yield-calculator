@@ -39,7 +39,9 @@ export default function ScenarioPanel({
     const [sailPrice, setSailPrice] = useState(0.01);
     const [isCalculatingAPR, setIsCalculatingAPR] = useState(false);
     const [aprError, setAprError] = useState(null);
+    const [selectedPreset, setSelectedPreset] = useState('Balanced');
     const sailPriceRef = useRef(0.01);
+    const prevPoolIdRef = useRef(null);
 
     const pool = scenario.pool;
 
@@ -62,6 +64,14 @@ export default function ScenarioPanel({
         if (!pool?.currentPrice || !scenario.priceRangeLow || !scenario.priceRangeHigh) return 1;
         return calculateLeverage(pool.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh);
     }, [pool?.currentPrice, scenario.priceRangeLow, scenario.priceRangeHigh]);
+
+    // Reset preset to Balanced when pool changes
+    useEffect(() => {
+        if (pool?.id && pool.id !== prevPoolIdRef.current) {
+            setSelectedPreset('Balanced');
+            prevPoolIdRef.current = pool.id;
+        }
+    }, [pool?.id]);
 
     // Fetch SAIL price on mount
     useEffect(() => {
@@ -342,10 +352,12 @@ export default function ScenarioPanel({
                         <div className="price-range-preset">
                             <label className="price-range-field-label">Preset</label>
                             <select
+                                value={selectedPreset}
                                 onChange={(e) => {
                                     const presets = isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS;
                                     const preset = presets.find(p => p.label === e.target.value);
                                     if (preset) {
+                                        setSelectedPreset(preset.label);
                                         const range = getPriceRangeFromPercent(
                                             pool.currentPrice,
                                             preset.lowerPct,
@@ -358,7 +370,6 @@ export default function ScenarioPanel({
                                         });
                                     }
                                 }}
-                                defaultValue="Balanced"
                             >
                                 {(isStablePool(pool) ? STABLE_RANGE_PRESETS : RANGE_PRESETS).map(preset => (
                                     <option key={preset.label} value={preset.label}>
