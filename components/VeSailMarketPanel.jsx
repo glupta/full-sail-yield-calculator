@@ -148,84 +148,110 @@ export default function VeSailMarketPanel() {
                 gridTemplateColumns: '1fr 1fr',
                 gap: 'var(--space-lg)',
             }}>
-                {/* Listings Table */}
+                {/* Current Listings */}
                 <div className="glass-card">
                     <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
                         <ShoppingCart size={18} style={{ color: 'var(--color-primary)' }} />
                         Current Listings
-                        <span style={{
-                            fontSize: '0.7rem',
-                            color: 'var(--text-muted)',
-                            fontWeight: 'normal',
-                        }}>
-                            Sorted by best deal
-                        </span>
                     </h3>
-
-                    <div style={{ overflowX: 'auto', marginTop: 'var(--space-md)' }}>
-                        <table className="data-table" style={{ width: '100%', fontSize: '0.85rem' }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ width: '40px' }}>#</th>
-                                    <th style={{ textAlign: 'right' }}>Price</th>
-                                    <th style={{ textAlign: 'right' }}>Locked SAIL</th>
-                                    <th style={{ textAlign: 'right' }}>vs Spot</th>
-                                    <th>Lock</th>
-                                    <th style={{ width: '60px' }}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {listings.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
-                                            No active listings
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    listings.slice(0, 10).map((listing, i) => (
-                                        <tr key={listing.tokenId}>
-                                            <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
-                                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
-                                                {listing.priceSui.toFixed(2)} SUI
-                                            </td>
-                                            <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
-                                                {listing.lockedSail >= 1000 ? `${(listing.lockedSail / 1000).toFixed(1)}K` : listing.lockedSail.toFixed(0)}
-                                            </td>
-                                            <td style={{
-                                                textAlign: 'right',
-                                                fontFamily: 'var(--font-mono)',
-                                                color: listing.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)'
-                                            }}>
-                                                {listing.discountPct > 0 ? '-' : '+'}
-                                                {Math.abs(listing.discountPct).toFixed(0)}%
-                                            </td>
-                                            <td>
-                                                <span style={{
-                                                    background: listing.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)',
-                                                    color: listing.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '0.7rem'
-                                                }}>
-                                                    {listing.lockType}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <a
-                                                    href={listing.tradeportUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="btn btn-ghost"
-                                                    style={{ padding: '4px 8px', fontSize: '0.7rem' }}
-                                                >
-                                                    Buy <ExternalLink size={10} />
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                    {/* Column Headers with tooltips */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.65rem',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginTop: 'var(--space-sm)',
+                        paddingBottom: 'var(--space-xs)',
+                        borderBottom: '1px solid var(--border-subtle)'
+                    }}>
+                        <span style={{ minWidth: '60px' }}>
+                            Price
+                            <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                <HelpCircle size={8} className="tooltip-icon" />
+                                <span className="tooltip-text">Price in SUI to purchase this veSAIL position</span>
+                            </span>
+                        </span>
+                        <span style={{ minWidth: '50px', textAlign: 'right' }}>
+                            SAIL
+                            <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                <HelpCircle size={8} className="tooltip-icon" />
+                                <span className="tooltip-text">Amount of SAIL locked in this veSAIL position</span>
+                            </span>
+                        </span>
+                        <span style={{ minWidth: '45px', textAlign: 'right' }}>
+                            vs Spot
+                            <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                <HelpCircle size={8} className="tooltip-icon" />
+                                <span className="tooltip-text">Discount (-) or premium (+) compared to SAIL spot price</span>
+                            </span>
+                        </span>
+                        <span style={{ minWidth: '45px', textAlign: 'right' }}>
+                            Lock
+                            <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                <HelpCircle size={8} className="tooltip-icon" />
+                                <span className="tooltip-text">PERM = permanent lock, or remaining lock duration</span>
+                            </span>
+                        </span>
+                        <span style={{ minWidth: '40px' }}></span>
+                    </div>
+                    {/* Listings rows */}
+                    <div style={{ fontSize: '0.8rem' }}>
+                        {listings.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
+                                No active listings
+                            </div>
+                        ) : (
+                            listings.slice(0, 8).map((listing, i) => (
+                                <div
+                                    key={listing.tokenId}
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: 'var(--space-xs) 0',
+                                        borderBottom: i < 7 ? '1px solid var(--border-subtle)' : 'none'
+                                    }}
+                                >
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '60px' }}>
+                                        {listing.priceSui.toFixed(1)} SUI
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '50px', textAlign: 'right' }}>
+                                        {listing.lockedSail >= 1000 ? `${(listing.lockedSail / 1000).toFixed(1)}K` : listing.lockedSail.toFixed(0)}
+                                    </span>
+                                    <span style={{
+                                        fontFamily: 'var(--font-mono)',
+                                        color: listing.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)',
+                                        minWidth: '45px',
+                                        textAlign: 'right'
+                                    }}>
+                                        {listing.discountPct > 0 ? '-' : '+'}
+                                        {Math.abs(listing.discountPct).toFixed(0)}%
+                                    </span>
+                                    <span style={{
+                                        background: listing.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)',
+                                        color: listing.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '0.65rem',
+                                        minWidth: '45px',
+                                        textAlign: 'center'
+                                    }}>
+                                        {listing.lockType}
+                                    </span>
+                                    <a
+                                        href={listing.tradeportUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-ghost"
+                                        style={{ padding: '2px 6px', fontSize: '0.65rem', minWidth: '40px' }}
+                                    >
+                                        Buy <ExternalLink size={8} />
+                                    </a>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
