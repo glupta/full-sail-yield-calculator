@@ -8,7 +8,7 @@ export default defineConfig({
         react(),
         nodePolyfills({
             // Required for Full Sail SDK which uses https.Agent and buffer
-            include: ['buffer', 'https', 'http', 'stream', 'util', 'url'],
+            include: ['buffer', 'https', 'http', 'stream', 'util', 'url', 'events'],
             globals: {
                 Buffer: true,
                 process: true,
