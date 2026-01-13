@@ -2,7 +2,7 @@
 
 /**
  * SailInvestorDashboard - SAIL Token Investor Metrics Dashboard
- * Clean, focused investor metrics with placeholder data styled distinctly
+ * Live metrics from Full Sail protocol APIs
  */
 import { useState, useEffect } from 'react';
 import { fetchSailMetrics, SailInvestorMetrics } from '@/lib/api-client';
@@ -17,10 +17,6 @@ import {
     Zap,
     Info,
 } from 'lucide-react';
-
-// Placeholder styling
-const PLACEHOLDER_COLOR = 'var(--color-warning)';
-const PLACEHOLDER_OPACITY = 0.6;
 
 // Format helpers
 const formatUsd = (val: number) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -72,7 +68,6 @@ function HeroMetric({
     sublabel,
     icon,
     highlight = false,
-    isPlaceholder = false,
     tooltip,
 }: {
     label: string;
@@ -80,7 +75,6 @@ function HeroMetric({
     sublabel?: string;
     icon: React.ReactNode;
     highlight?: boolean;
-    isPlaceholder?: boolean;
     tooltip?: string;
 }) {
     return (
@@ -92,7 +86,6 @@ function HeroMetric({
             borderRadius: 'var(--radius-lg)',
             padding: 'var(--space-lg)',
             textAlign: 'center',
-            opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
         }}>
             <div style={{
                 display: 'flex',
@@ -105,13 +98,12 @@ function HeroMetric({
             }}>
                 {icon}
                 {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
-                {isPlaceholder && <span style={{ color: PLACEHOLDER_COLOR, fontSize: '0.6rem' }}>TBD</span>}
             </div>
             <div style={{
                 fontSize: '1.75rem',
                 fontWeight: '700',
                 fontFamily: 'var(--font-mono)',
-                color: isPlaceholder ? PLACEHOLDER_COLOR : (highlight ? 'var(--color-success)' : 'var(--text-primary)'),
+                color: highlight ? 'var(--color-success)' : 'var(--text-primary)',
             }}>
                 {value}
             </div>
@@ -125,25 +117,20 @@ function HeroMetric({
 }
 
 // Metric Row with tooltip
-function MetricRow({ label, value, valueColor, isPlaceholder = false, tooltip }: {
+function MetricRow({ label, value, valueColor, tooltip }: {
     label: string;
     value: string | React.ReactNode;
     valueColor?: string;
-    isPlaceholder?: boolean;
     tooltip?: string;
 }) {
     return (
-        <div className="flex justify-between" style={{
-            padding: 'var(--space-xs) 0',
-            opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
-        }}>
+        <div className="flex justify-between" style={{ padding: 'var(--space-xs) 0' }}>
             <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
                 {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
-                {isPlaceholder && <span style={{ color: PLACEHOLDER_COLOR, marginLeft: '4px', fontSize: '0.65rem' }}>TBD</span>}
             </span>
             <span style={{
                 fontWeight: 600,
-                color: isPlaceholder ? PLACEHOLDER_COLOR : valueColor,
+                color: valueColor,
                 fontFamily: 'var(--font-mono)'
             }}>
                 {value}
@@ -258,11 +245,10 @@ export default function SailInvestorDashboard() {
                     />
                     <HeroMetric
                         label="Lock Rate"
-                        value="—"
-                        sublabel="Needs supply data"
+                        value={formatPercent(metrics.lockRate)}
+                        sublabel={`Avg ${(metrics.avgLockDurationDays / 365).toFixed(1)}yr lock`}
                         icon={<Zap size={16} />}
-                        isPlaceholder={true}
-                        tooltip="Percentage of circulating SAIL locked as veSAIL. Requires circulating supply data."
+                        tooltip="Percentage of circulating SAIL locked as veSAIL"
                     />
                 </div>
             </div>
@@ -301,8 +287,8 @@ export default function SailInvestorDashboard() {
                     />
                     <MetricRow
                         label="Fee Yield"
-                        value={formatPercent(metrics.capitalEfficiency)}
-                        valueColor={metrics.capitalEfficiency > 0.1 ? 'var(--color-success)' : undefined}
+                        value={formatPercent(metrics.feeYield)}
+                        valueColor={metrics.feeYield > 0.1 ? 'var(--color-success)' : undefined}
                         tooltip="Annualized fee yield on TVL. (24h Fees × 365) / TVL"
                     />
                 </div>
@@ -342,12 +328,22 @@ export default function SailInvestorDashboard() {
                     />
                 </div>
 
-                {/* Tokenomics (with placeholders) */}
+                {/* Tokenomics */}
                 <div className="glass-card">
                     <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem' }}>
                         <BarChart3 size={18} style={{ color: 'var(--color-primary)' }} />
                         Tokenomics
                     </h3>
+                    <MetricRow
+                        label="Circulating"
+                        value={(metrics.circulatingSupply >= 1e9 ? (metrics.circulatingSupply / 1e9).toFixed(1) + 'B' : (metrics.circulatingSupply / 1e6).toFixed(1) + 'M') + ' SAIL'}
+                        tooltip="SAIL tokens currently in circulation"
+                    />
+                    <MetricRow
+                        label="Market Cap"
+                        value={formatCompact(metrics.marketCap)}
+                        tooltip="Price × Circulating Supply"
+                    />
                     <MetricRow
                         label="Daily oSAIL"
                         value={formatNumber(metrics.totalOsailEmissions24h)}
@@ -359,58 +355,11 @@ export default function SailInvestorDashboard() {
                         tooltip="Dollar value of weekly oSAIL emissions at current SAIL price"
                     />
                     <MetricRow
-                        label="Circulating Supply"
-                        value="—"
-                        isPlaceholder={true}
-                        tooltip="SAIL tokens currently in circulation. Requires external data."
-                    />
-                    <MetricRow
-                        label="Total Supply"
-                        value="—"
-                        isPlaceholder={true}
-                        tooltip="Maximum SAIL token supply. Requires external data."
-                    />
-                    <MetricRow
-                        label="Market Cap"
-                        value="—"
-                        isPlaceholder={true}
-                        tooltip="Price × Circulating Supply. Requires supply data."
+                        label="Cumulative Emissions"
+                        value={formatCompact(metrics.cumulativeEmissionsUsd)}
+                        tooltip="Total oSAIL emissions distributed since launch"
                     />
                 </div>
-            </div>
-
-            {/* Legend for placeholder data */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 'var(--space-lg)',
-                marginTop: 'var(--space-xl)',
-                fontSize: '0.7rem',
-                color: 'var(--text-muted)',
-            }}>
-                <span>
-                    <span style={{
-                        display: 'inline-block',
-                        width: '8px',
-                        height: '8px',
-                        background: 'var(--color-success)',
-                        borderRadius: '50%',
-                        marginRight: '4px'
-                    }}></span>
-                    Live data
-                </span>
-                <span>
-                    <span style={{
-                        display: 'inline-block',
-                        width: '8px',
-                        height: '8px',
-                        background: PLACEHOLDER_COLOR,
-                        borderRadius: '50%',
-                        marginRight: '4px',
-                        opacity: PLACEHOLDER_OPACITY,
-                    }}></span>
-                    Coming soon
-                </span>
             </div>
         </div>
     );

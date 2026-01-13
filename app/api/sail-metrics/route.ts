@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchGaugePools, fetchSailPrice, getSDK } from '@/lib/sdk-server';
+import { fetchGaugePools, fetchSailPrice } from '@/lib/sdk-server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -11,14 +11,17 @@ export interface SailInvestorMetrics {
     // Price & Market
     sailPrice: number;
 
-    // veSAIL Lock Stats
+    // Supply Data
+    circulatingSupply: number;
     totalLockedSail: number;
     lockedValueUsd: number;
-    lockRate: number | null; // Requires circulating supply
+    lockRate: number;
+    avgLockDurationDays: number;
 
     // Yield Metrics  
     lastWeekFeesUsd: number;
     votingApr: number;
+    avgVotingApr: number;
 
     // Protocol Aggregates
     totalTvl: number;
@@ -29,11 +32,15 @@ export interface SailInvestorMetrics {
 
     // Derived Metrics
     feeEmissionRatio: number;
-    capitalEfficiency: number; // Fees / TVL (annualized)
+    feeYield: number; // Annualized fees / TVL
 
     // Emission Analysis
     weeklyEmissionsUsd: number;
-    annualizedEmissionRate: number | null; // Requires supply
+    cumulativeEmissionsUsd: number;
+
+    // Market Cap
+    marketCap: number;
+    fdv: number | null; // Requires total supply
 
     lastUpdated: string;
 }
@@ -55,13 +62,30 @@ async function fetchProtocolConfig() {
     }
 }
 
+/**
+ * Fetch stats overview including supply data
+ */
+async function fetchStatsOverview() {
+    try {
+        const res = await fetch('https://app.fullsail.finance/api/stats/overview', {
+            next: { revalidate: 300 }
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (e) {
+        console.error('Failed to fetch stats overview:', e);
+        return null;
+    }
+}
+
 export async function GET() {
     try {
         // Fetch all data in parallel
-        const [pools, sailPrice, config] = await Promise.all([
+        const [pools, sailPrice, config, statsOverview] = await Promise.all([
             fetchGaugePools(),
             fetchSailPrice(),
             fetchProtocolConfig(),
+            fetchStatsOverview(),
         ]);
 
         // Aggregate pool metrics
@@ -92,10 +116,29 @@ export async function GET() {
         const totalLockedSail = globalVotingPower / Math.pow(10, SAIL_DECIMALS);
         const lockedValueUsd = totalLockedSail * sailPrice;
 
-        // Calculate voting APR
+        // Calculate voting APR from config
         const votingApr = lockedValueUsd > 0
             ? (lastWeekFeesUsd / lockedValueUsd) * (365 / EPOCH_DAYS)
             : 0;
+
+        // Stats overview data
+        const supply = statsOverview?.supply || {};
+        const statistics = statsOverview?.statistics || {};
+        const overview = statsOverview?.overview || {};
+
+        // Supply metrics (with 6 decimals)
+        const circulatingSupply = Number(supply.sail_circulating_supply || 0) / 1e6;
+        const avgLockDurationDays = supply.avg_lock_duration_days || 0;
+        const avgVotingApr = statistics.avg_voting_apr || 0;
+        const cumulativeEmissionsUsd = Number(overview.cumulative_osail_emissions_usd || 0);
+
+        // Lock rate
+        const lockRate = circulatingSupply > 0
+            ? totalLockedSail / circulatingSupply
+            : 0;
+
+        // Market cap
+        const marketCap = circulatingSupply * sailPrice;
 
         // Emission value
         const weeklyEmissionsUsd = totalOsailEmissions24h * 7 * sailPrice;
@@ -105,20 +148,23 @@ export async function GET() {
             ? lastWeekFeesUsd / weeklyEmissionsUsd
             : 0;
 
-        // Capital efficiency (annualized fee yield on TVL)
-        const capitalEfficiency = totalTvl > 0
+        // Fee yield (annualized fee return on TVL)
+        const feeYield = totalTvl > 0
             ? (totalFees24h * 365) / totalTvl
             : 0;
 
         const metrics: SailInvestorMetrics = {
             sailPrice,
 
+            circulatingSupply,
             totalLockedSail,
             lockedValueUsd,
-            lockRate: null, // Would need circulating supply
+            lockRate,
+            avgLockDurationDays,
 
             lastWeekFeesUsd,
             votingApr,
+            avgVotingApr,
 
             totalTvl,
             totalVolume24h,
@@ -127,10 +173,13 @@ export async function GET() {
             poolCount: pools.length,
 
             feeEmissionRatio,
-            capitalEfficiency,
+            feeYield,
 
             weeklyEmissionsUsd,
-            annualizedEmissionRate: null, // Would need total supply
+            cumulativeEmissionsUsd,
+
+            marketCap,
+            fdv: null, // Would need total supply
 
             lastUpdated: new Date().toISOString(),
         };

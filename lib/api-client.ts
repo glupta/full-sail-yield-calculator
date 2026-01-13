@@ -127,20 +127,25 @@ export async function fetchConfig(): Promise<ProtocolConfig | null> {
 
 export interface SailInvestorMetrics {
     sailPrice: number;
+    circulatingSupply: number;
     totalLockedSail: number;
     lockedValueUsd: number;
-    lockRate: number | null;
+    lockRate: number;
+    avgLockDurationDays: number;
     lastWeekFeesUsd: number;
     votingApr: number;
+    avgVotingApr: number;
     totalTvl: number;
     totalVolume24h: number;
     totalFees24h: number;
     totalOsailEmissions24h: number;
     poolCount: number;
     feeEmissionRatio: number;
-    capitalEfficiency: number;
+    feeYield: number;
     weeklyEmissionsUsd: number;
-    annualizedEmissionRate: number | null;
+    cumulativeEmissionsUsd: number;
+    marketCap: number;
+    fdv: number | null;
     lastUpdated: string;
 }
 
