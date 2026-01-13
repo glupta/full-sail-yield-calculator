@@ -301,26 +301,14 @@ export default function SailInvestorDashboard() {
                         veSAIL Yield
                     </h3>
                     <MetricRow
-                        label="Weekly Fees"
-                        value={formatUsd(metrics.lastWeekFeesUsd)}
-                        valueColor="var(--color-success)"
-                        tooltip="Total fees distributed to veSAIL voters last epoch (7 days)"
-                    />
-                    <MetricRow
-                        label="Voting APR"
-                        value={formatPercent(metrics.votingApr)}
-                        valueColor="var(--color-success)"
-                        tooltip="Annualized yield for veSAIL holders from trading fees"
+                        label="Avg Voting APR"
+                        value={formatPercent(metrics.avgVotingApr / 100)}
+                        tooltip="Average historical voting APR across epochs"
                     />
                     <MetricRow
                         label="Locked SAIL"
                         value={formatNumber(metrics.totalLockedSail)}
                         tooltip="Total SAIL tokens locked as veSAIL"
-                    />
-                    <MetricRow
-                        label="Locked Value"
-                        value={formatCompact(metrics.lockedValueUsd)}
-                        tooltip="USD value of all locked SAIL at current price"
                     />
                     <MetricRow
                         label="Fee/Emission"
@@ -333,17 +321,12 @@ export default function SailInvestorDashboard() {
                 <div className="glass-card">
                     <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem' }}>
                         <BarChart3 size={18} style={{ color: 'var(--color-primary)' }} />
-                        Tokenomics
+                        Emissions
                     </h3>
                     <MetricRow
                         label="Circulating"
                         value={(metrics.circulatingSupply >= 1e9 ? (metrics.circulatingSupply / 1e9).toFixed(1) + 'B' : (metrics.circulatingSupply / 1e6).toFixed(1) + 'M') + ' SAIL'}
                         tooltip="SAIL tokens currently in circulation"
-                    />
-                    <MetricRow
-                        label="Market Cap"
-                        value={formatCompact(metrics.marketCap)}
-                        tooltip="Price × Circulating Supply"
                     />
                     <MetricRow
                         label="Daily oSAIL"
@@ -356,7 +339,7 @@ export default function SailInvestorDashboard() {
                         tooltip="Dollar value of weekly oSAIL emissions at current SAIL price"
                     />
                     <MetricRow
-                        label="Cumulative Emissions"
+                        label="Cumulative"
                         value={formatCompact(metrics.cumulativeEmissionsUsd)}
                         tooltip="Total oSAIL emissions distributed since launch"
                     />
