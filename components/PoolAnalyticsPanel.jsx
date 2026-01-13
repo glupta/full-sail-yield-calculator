@@ -52,8 +52,8 @@ export default function PoolAnalyticsPanel({ pool }) {
                 <h4>Pool Metrics</h4>
             </div>
 
-            {/* Core Metrics Grid */}
-            <div className="analytics-metrics-grid">
+            {/* Top Row: TVL, Volume, Fees */}
+            <div className="analytics-metrics-grid" style={{ marginBottom: 'var(--space-sm)' }}>
                 <MetricCard
                     icon={<DollarSign size={14} />}
                     label="TVL"
@@ -70,15 +70,14 @@ export default function PoolAnalyticsPanel({ pool }) {
                     label="24h Fees"
                     value={analytics.fees24hFormatted}
                 />
+            </div>
+
+            {/* Bottom Row: Active Liq%, Current Price, Fee APR, Yield APR */}
+            <div className="analytics-metrics-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                 <MetricCard
                     icon={<Percent size={14} />}
-                    label="Fee Tier"
-                    value={analytics.feeTierFormatted}
-                />
-                <MetricCard
-                    icon={<TrendingUp size={14} />}
-                    label="Fee APR"
-                    value={analytics.feeAprFormatted}
+                    label="Active Liq."
+                    value={analytics.activeLiquidityPercentFormatted}
                 />
                 <MetricCard
                     icon={<DollarSign size={14} />}
@@ -86,13 +85,13 @@ export default function PoolAnalyticsPanel({ pool }) {
                     value={analytics.currentPriceFormatted}
                 />
                 <MetricCard
-                    icon={<Percent size={14} />}
-                    label="Active Liq."
-                    value={analytics.activeLiquidityPercentFormatted}
+                    icon={<TrendingUp size={14} />}
+                    label="Fee APR"
+                    value={analytics.feeAprFormatted}
                 />
                 <MetricCard
                     icon={<TrendingUp size={14} />}
-                    label="Total APR"
+                    label="Yield APR"
                     value={analytics.fullAprFormatted}
                     accent="success"
                 />
