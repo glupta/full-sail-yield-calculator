@@ -8,8 +8,11 @@ export default defineConfig({
         react(),
         nodePolyfills({
             // Polyfill all Node.js modules for SDK compatibility
-            // The SDK uses Axios which depends on EventEmitter
             protocolImports: true,
+            // Override EventEmitter to ensure proper browser compatibility
+            overrides: {
+                events: 'events',
+            },
         }),
     ],
     resolve: {
@@ -18,6 +21,18 @@ export default defineConfig({
             '@fullsailfinance/sdk': path.resolve(
                 './node_modules/@fullsailfinance/sdk/dist/index.js'
             ),
+            // Force events to use the proper browser polyfill
+            'events': 'events',
+        },
+    },
+    optimizeDeps: {
+        // Pre-bundle problematic dependencies
+        include: ['events', 'axios'],
+        esbuildOptions: {
+            // Define global for browser compatibility
+            define: {
+                global: 'globalThis',
+            },
         },
     },
     build: {
