@@ -106,7 +106,7 @@ export default function PoolAnalyticsPanel({ pool }) {
                     label="Yield APR"
                     value={analytics.fullAprFormatted}
                     accent="success"
-                    tooltip="Total APR including trading fees, oSAIL emissions, and external incentives (like SUI rewards)"
+                    tooltip="SDK-calculated APR from oSAIL emissions and incentives. May differ from Full Sail UI due to concentration assumptions."
                 />
             </div>
         </div>
