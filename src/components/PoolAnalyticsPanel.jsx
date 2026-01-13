@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getPoolAnalytics } from '../lib/pool-analytics';
-import { TrendingUp, DollarSign, Activity, Coins } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, Coins, Percent } from 'lucide-react';
 
 /**
  * Pool Analytics Panel
@@ -67,6 +67,33 @@ export default function PoolAnalyticsPanel({ pool }) {
                     icon={<Coins size={14} />}
                     label="24h Fees"
                     value={analytics.fees24hFormatted}
+                />
+                <MetricCard
+                    icon={<Percent size={14} />}
+                    label="Fee Tier"
+                    value={analytics.feeTierFormatted}
+                />
+                <MetricCard
+                    icon={<TrendingUp size={14} />}
+                    label="Fee APR"
+                    value={analytics.feeAprFormatted}
+                />
+                <MetricCard
+                    icon={<Coins size={14} />}
+                    label="Incentives APR"
+                    value={analytics.incentivesAprFormatted}
+                    accent="success"
+                />
+                <MetricCard
+                    icon={<Percent size={14} />}
+                    label="Active Liq."
+                    value={analytics.activeLiquidityPercentFormatted}
+                />
+                <MetricCard
+                    icon={<TrendingUp size={14} />}
+                    label="Total APR"
+                    value={analytics.fullAprFormatted}
+                    accent="success"
                 />
             </div>
         </div>

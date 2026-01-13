@@ -55,10 +55,12 @@ function calculateExternalRewards(rewards, depositAmount, timeline) {
 
 /**
  * Calculate results for a single scenario
- * @param {object} scenario - Scenario with pool, depositAmount, timeline, osailStrategy, exitPrice
+ * @param {object} scenario - Scenario with pool, depositAmount, timeline, osailStrategy, exitPrice, aprOverride
+ * @param {number|null} effectiveAPR - Optional: Pre-calculated APR from SDK (PositionUtils.estimateAprByLiquidity).
+ *                                      If null, falls back to emission-based calculation.
  * @returns {object|null} - Calculated results or null if no pool
  */
-export function calculateScenarioResults(scenario) {
+export function calculateScenarioResults(scenario, effectiveAPR = null) {
     const pool = scenario.pool;
     if (!pool) return null;
 
@@ -119,33 +121,51 @@ export function calculateScenarioResults(scenario) {
         }
     }
 
-    // Project oSAIL emissions (base emissions without leverage)
-    const baseProjectedOsail = projectEmissions(
-        scenario.depositAmount,
-        tvl,
-        osail24h,
-        scenario.timeline
-    );
+    // Calculate SAIL yield
+    // If effectiveAPR is provided (from SDK's estimateAprByLiquidity), use it directly
+    // Otherwise, fall back to emission-based calculation
+    let projectedOsail, sailAPR, lockAPR, redeemAPR;
+    const lockPct = scenario.osailStrategy / 100;
 
-    // Apply leverage AND time-in-range to emissions
-    // Concentrated positions earn more, but only while in range
-    const projectedOsail = baseProjectedOsail * leverageMultiplier * timeInRangeFraction;
+    if (effectiveAPR !== null && effectiveAPR > 0) {
+        // Use SDK-provided APR to calculate yield directly
+        // effectiveAPR is the total APR for the position (already includes leverage)
+        sailAPR = effectiveAPR;
+
+        // For lock vs redeem breakdown:
+        // Lock gives 1:1 value, redeem gives 50% value
+        // SDK APR already factors in the claim strategy choice, so use as-is
+        lockAPR = effectiveAPR;
+        redeemAPR = effectiveAPR * 0.5; // Redeem is 50% of lock value
+
+        // Calculate projected value from APR
+        const dailyRate = effectiveAPR / 100 / 365;
+        const projectedValue = scenario.depositAmount * dailyRate * scenario.timeline * timeInRangeFraction;
+
+        // Estimate oSAIL amount from projected value
+        projectedOsail = projectedValue / SAIL_PRICE; // Approximate oSAIL amount
+    } else {
+        // Fall back to emission-based calculation
+        const baseProjectedOsail = projectEmissions(
+            scenario.depositAmount,
+            tvl,
+            osail24h,
+            scenario.timeline
+        );
+
+        // Apply leverage AND time-in-range to emissions
+        projectedOsail = baseProjectedOsail * leverageMultiplier * timeInRangeFraction;
+
+        // Calculate APRs for SAIL emissions (with leverage applied)
+        const baseEmissionAPR = calculateEmissionAPR(osail24h, SAIL_PRICE, tvl);
+        const leveragedEmissionAPR = baseEmissionAPR * leverageMultiplier;
+        lockAPR = leveragedEmissionAPR * 100;
+        redeemAPR = leveragedEmissionAPR * 50;
+        sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
+    }
 
     // Calculate strategy value
-    const lockPct = scenario.osailStrategy / 100;
     const strategyValue = getEmissionValue(projectedOsail, SAIL_PRICE, lockPct);
-
-    // Calculate APRs for SAIL emissions (with leverage applied)
-    // Base SAIL emission APR (at 100% lock value)
-    const baseEmissionAPR = calculateEmissionAPR(osail24h, SAIL_PRICE, tvl);
-    // Apply leverage to APRs
-    const leveragedEmissionAPR = baseEmissionAPR * leverageMultiplier;
-    // Lock APR = leveraged APR (1:1 SAIL value)
-    const lockAPR = leveragedEmissionAPR * 100; // Convert to percentage
-    // Redeem APR = 50% of leveraged (redeem at 50% SAIL price)
-    const redeemAPR = leveragedEmissionAPR * 50; // 50% of the value
-    // Blended APR based on strategy
-    const sailAPR = (lockPct * lockAPR) + ((1 - lockPct) * redeemAPR);
 
     // Calculate external rewards (SUI incentives, etc.)
     const { externalRewards, externalRewardsValue } = calculateExternalRewards(

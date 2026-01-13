@@ -141,6 +141,14 @@ export const RANGE_PRESETS = [
 ];
 
 /**
+ * Get the default preset (Balanced) for initializing price ranges
+ * @returns {object} - Preset with lowerPct and upperPct
+ */
+export function getDefaultPreset() {
+    return RANGE_PRESETS.find(p => p.label === 'Balanced') || RANGE_PRESETS[2];
+}
+
+/**
  * Preset range configurations for stablecoin pools
  * Much tighter ranges since stable pairs have minimal price deviation
  */

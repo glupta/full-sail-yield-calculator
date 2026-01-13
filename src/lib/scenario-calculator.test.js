@@ -610,3 +610,154 @@ describe('calculateScenarioResults - Range-based SAIL earnings', () => {
         expect(outOfRangeResult.projectedOsail).toBeLessThan(inRangeResult.projectedOsail);
     });
 });
+
+describe('calculateScenarioResults - effectiveAPR parameter', () => {
+    const basePool = {
+        id: 'test-pool',
+        name: 'TEST/USDC',
+        dinamic_stats: { tvl: 1000000 },
+        distributed_osail_24h: 1e9 * 100, // 100 oSAIL/day
+        currentPrice: 1.0,
+    };
+
+    const baseScenario = {
+        pool: basePool,
+        depositAmount: 10000,
+        timeline: 30,
+        osailStrategy: 50,
+        exitPrice: 1.0,
+        priceRangeLow: 0.8,
+        priceRangeHigh: 1.2,
+    };
+
+    describe('when effectiveAPR is null', () => {
+        it('should fall back to emission-based calculation', () => {
+            const result = calculateScenarioResults(baseScenario, null);
+
+            // Should have non-zero values from emission calculation
+            expect(result).not.toBeNull();
+            expect(result.sailAPR).toBeGreaterThan(0);
+            expect(result.projectedOsail).toBeGreaterThan(0);
+        });
+    });
+
+    describe('when effectiveAPR is 0', () => {
+        it('should fall back to emission-based calculation (0 is falsy)', () => {
+            const result = calculateScenarioResults(baseScenario, 0);
+
+            // Should have non-zero values from emission calculation
+            expect(result).not.toBeNull();
+            expect(result.sailAPR).toBeGreaterThan(0);
+        });
+    });
+
+    describe('when effectiveAPR is provided', () => {
+        it('should use effectiveAPR for sailAPR', () => {
+            const effectiveAPR = 25.5; // 25.5%
+            const result = calculateScenarioResults(baseScenario, effectiveAPR);
+
+            expect(result.sailAPR).toBe(effectiveAPR);
+        });
+
+        it('should calculate lockAPR equal to effectiveAPR', () => {
+            const effectiveAPR = 30;
+            const result = calculateScenarioResults(baseScenario, effectiveAPR);
+
+            expect(result.lockAPR).toBe(effectiveAPR);
+        });
+
+        it('should calculate redeemAPR as 50% of effectiveAPR', () => {
+            const effectiveAPR = 30;
+            const result = calculateScenarioResults(baseScenario, effectiveAPR);
+
+            expect(result.redeemAPR).toBe(effectiveAPR * 0.5);
+        });
+
+        it('should calculate projected value from APR correctly', () => {
+            const effectiveAPR = 36.5; // 36.5% APR
+            const result = calculateScenarioResults(baseScenario, effectiveAPR);
+
+            // Expected yield: APR% * deposit * (days/365) * timeInRange
+            // 36.5% * 10000 * (30/365) * 1.0 = ~300
+            const dailyRate = effectiveAPR / 100 / 365;
+            const expectedValue = 10000 * dailyRate * 30;
+
+            // osailValue should be close to expected (accounting for lock/redeem split)
+            // At 50% lock strategy: 50% gets 1:1, 50% gets 50% value = 75% average
+            expect(result.osailValue).toBeCloseTo(expectedValue * 0.75, 0);
+        });
+
+        it('should apply timeInRangeFraction to APR-based yield', () => {
+            // Scenario where price exits range
+            const outOfRangeScenario = {
+                ...baseScenario,
+                priceRangeLow: 0.9,
+                priceRangeHigh: 1.1,
+                exitPrice: 1.2, // Price exits range at 1.1 (50% through timeline)
+            };
+
+            const effectiveAPR = 30;
+            const resultInRange = calculateScenarioResults(baseScenario, effectiveAPR);
+            const resultOutOfRange = calculateScenarioResults(outOfRangeScenario, effectiveAPR);
+
+            // Out of range should earn less due to time fraction
+            expect(resultOutOfRange.projectedOsail).toBeLessThan(resultInRange.projectedOsail);
+        });
+    });
+
+    describe('when comparing APR-based vs emission-based', () => {
+        it('SDK APR should produce different results than emission calc', () => {
+            const emissionResult = calculateScenarioResults(baseScenario, null);
+            const sdkResult = calculateScenarioResults(baseScenario, 50); // Different arbitrary APR
+
+            // Results should differ since we're using different APR sources
+            expect(sdkResult.sailAPR).not.toBeCloseTo(emissionResult.sailAPR, 0);
+        });
+    });
+
+    describe('edge cases', () => {
+        it('should handle very high APR values', () => {
+            const result = calculateScenarioResults(baseScenario, 500); // 500% APR
+
+            expect(result).not.toBeNull();
+            expect(result.sailAPR).toBe(500);
+            expect(result.osailValue).toBeGreaterThan(0);
+        });
+
+        it('should handle decimal APR values', () => {
+            const result = calculateScenarioResults(baseScenario, 12.345);
+
+            expect(result.sailAPR).toBe(12.345);
+        });
+
+        it('should not affect IL calculation (IL is independent of APR)', () => {
+            const scenario = {
+                ...baseScenario,
+                exitPrice: 1.5, // 50% price increase
+            };
+
+            const resultWithAPR = calculateScenarioResults(scenario, 50);
+            const resultWithoutAPR = calculateScenarioResults(scenario, null);
+
+            // IL should be the same regardless of APR source
+            expect(resultWithAPR.ilPercent).toBeCloseTo(resultWithoutAPR.ilPercent, 6);
+            expect(resultWithAPR.ilDollar).toBeCloseTo(resultWithoutAPR.ilDollar, 1);
+        });
+
+        it('should not affect external rewards calculation', () => {
+            const scenarioWithRewards = {
+                ...baseScenario,
+                pool: {
+                    ...basePool,
+                    rewards: [{ token: '0x2::sui::SUI', apr: 25 }],
+                },
+            };
+
+            const resultWithAPR = calculateScenarioResults(scenarioWithRewards, 50);
+            const resultWithoutAPR = calculateScenarioResults(scenarioWithRewards, null);
+
+            // External rewards should be identical
+            expect(resultWithAPR.externalRewardsValue).toBe(resultWithoutAPR.externalRewardsValue);
+        });
+    });
+});

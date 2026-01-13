@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { X, CheckCircle, ChevronDown } from 'lucide-react';
 import { calculateScenarioResults } from '../lib/scenario-calculator';
 import { calculateRangeAPR, RANGE_PRESETS, STABLE_RANGE_PRESETS, isStablePool, getPriceRangeFromPercent, calculateLeverage } from '../lib/calculators/leverage-calculator';
@@ -19,12 +19,16 @@ export default function ScenarioPanel({
     const [isIncentivesExpanded, setIsIncentivesExpanded] = useState(false);
     const [sdkAPR, setSdkAPR] = useState(null);
     const [sailPrice, setSailPrice] = useState(0.01);
+    const [isCalculatingAPR, setIsCalculatingAPR] = useState(false);
+    const sailPriceRef = useRef(0.01);
 
     const pool = scenario.pool;
 
     const results = useMemo(() => {
-        return calculateScenarioResults(scenario);
-    }, [scenario]);
+        // Determine effective APR: user override > SDK-calculated > null (fallback to emission calc)
+        const effectiveAPR = scenario.aprOverride !== null ? scenario.aprOverride : sdkAPR;
+        return calculateScenarioResults(scenario, effectiveAPR);
+    }, [scenario, sdkAPR]);
 
     const rangeAPR = useMemo(() => {
         if (!pool?.full_apr || !pool?.currentPrice) return null;
@@ -43,16 +47,38 @@ export default function ScenarioPanel({
     // Fetch SAIL price on mount
     useEffect(() => {
         fetchSailPrice().then(price => {
-            if (price > 0) setSailPrice(price);
+            if (price > 0) {
+                setSailPrice(price);
+                sailPriceRef.current = price;
+            }
         });
     }, []);
 
-    // Calculate SDK-based APR when price range changes
+    // Calculate SDK-based APR when price range or pool changes
+    // Use a poolKey to detect when pool's relevant properties change
+    const poolKey = pool ? `${pool.id}-${pool.current_sqrt_price}-${pool.distributed_osail_24h}` : null;
+
     useEffect(() => {
-        if (!pool || !scenario.priceRangeLow || !scenario.priceRangeHigh || !scenario.depositAmount) {
+        if (!pool?.id || !scenario.priceRangeLow || !scenario.priceRangeHigh || !scenario.depositAmount) {
             setSdkAPR(null);
+            setIsCalculatingAPR(false);
             return;
         }
+
+        let cancelled = false;
+        setIsCalculatingAPR(true);
+
+        // Use the latest sail price (from ref to avoid stale closure)
+        const currentSailPrice = sailPriceRef.current > 0.01 ? sailPriceRef.current : sailPrice;
+
+        // Add timeout to prevent hanging
+        const timeoutId = setTimeout(() => {
+            if (!cancelled) {
+                console.warn('SDK APR calculation timed out');
+                setSdkAPR(null);
+                setIsCalculatingAPR(false);
+            }
+        }, 10000); // 10 second timeout
 
         calculateEstimatedAPRFromSDK({
             pool,
@@ -60,11 +86,28 @@ export default function ScenarioPanel({
             priceHigh: scenario.priceRangeHigh,
             depositAmount: scenario.depositAmount,
             rewardChoice: scenario.osailStrategy >= 50 ? 'vesail' : 'liquid',
-            sailPrice,
+            sailPrice: currentSailPrice,
         }).then(apr => {
-            setSdkAPR(apr);
+            clearTimeout(timeoutId);
+            if (!cancelled) {
+                console.log('[APR Update]', apr, 'for pool:', pool.name);
+                setSdkAPR(apr);
+                setIsCalculatingAPR(false);
+            }
+        }).catch((err) => {
+            clearTimeout(timeoutId);
+            if (!cancelled) {
+                console.error('[APR Error]', err);
+                setSdkAPR(null);
+                setIsCalculatingAPR(false);
+            }
         });
-    }, [pool, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timeoutId);
+        };
+    }, [poolKey, scenario.priceRangeLow, scenario.priceRangeHigh, scenario.depositAmount, scenario.osailStrategy, sailPrice]);
 
 
     const formatUsd = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -399,6 +442,104 @@ export default function ScenarioPanel({
                     </div>
                 </div>
             </div>
+
+            {/* Estimated APR Input */}
+            {pool && (
+                <div className="mb-md">
+                    <div className="price-range-inline" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                        <div className="price-range-field">
+                            <label className="price-range-field-label">
+                                Estimated APR
+                                {scenario.aprOverride === null && sdkAPR !== null && !isCalculatingAPR && (
+                                    <span style={{
+                                        marginLeft: '6px',
+                                        fontSize: '0.65rem',
+                                        color: 'var(--color-primary)',
+                                        opacity: 0.8
+                                    }}>(SDK)</span>
+                                )}
+                                {isCalculatingAPR && (
+                                    <span style={{
+                                        marginLeft: '6px',
+                                        fontSize: '0.65rem',
+                                        color: 'var(--text-muted)',
+                                        opacity: 0.8
+                                    }}>calculating...</span>
+                                )}
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={scenario.aprOverride !== null
+                                        ? scenario.aprOverride
+                                        : (sdkAPR !== null && sdkAPR > 0 ? sdkAPR.toFixed(1) : '')}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || val === null) {
+                                            onChange({ aprOverride: null });
+                                        } else {
+                                            const numVal = parseFloat(val);
+                                            if (!isNaN(numVal) && numVal >= 0) {
+                                                onChange({ aprOverride: numVal });
+                                            }
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        paddingRight: '28px',
+                                        opacity: isCalculatingAPR ? 0.6 : 1,
+                                        transition: 'opacity 0.2s ease'
+                                    }}
+                                    placeholder={isCalculatingAPR ? 'Calculating...' : 'Loading...'}
+                                />
+                                <span style={{
+                                    position: 'absolute',
+                                    right: '12px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    color: 'var(--text-muted)',
+                                    fontWeight: 500,
+                                    pointerEvents: 'none'
+                                }}>%</span>
+                            </div>
+                            {scenario.aprOverride !== null && sdkAPR !== null && (
+                                <button
+                                    onClick={() => onChange({ aprOverride: null })}
+                                    style={{
+                                        marginTop: '4px',
+                                        fontSize: '0.7rem',
+                                        color: 'var(--color-primary)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: 0,
+                                        textDecoration: 'underline'
+                                    }}
+                                >
+                                    Reset to SDK ({sdkAPR.toFixed(1)}%)
+                                </button>
+                            )}
+                        </div>
+                        <div className="price-range-field">
+                            <label className="price-range-field-label">Leverage</label>
+                            <div style={{
+                                padding: '12px',
+                                background: 'rgba(255,255,255,0.03)',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1px solid var(--border-subtle)',
+                                textAlign: 'center',
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 600,
+                                color: leverage > 2 ? 'var(--color-warning)' : 'var(--text-primary)'
+                            }}>
+                                {leverage.toFixed(2)}x
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Claim Strategy - Dedicated Section */}
             <div className="claim-strategy-section mb-md">

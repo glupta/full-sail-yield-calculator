@@ -35,6 +35,20 @@ function formatPercent(value) {
 }
 
 /**
+ * Format liquidity value with appropriate suffix (B/M/K)
+ * Liquidity is in arbitrary units, not USD
+ */
+function formatLiquidity(value) {
+    if (!value || value === 0) return '0';
+    const num = Number(value);
+    if (num >= 1e12) return `${(num / 1e12).toFixed(1)}T`;
+    if (num >= 1e9) return `${(num / 1e9).toFixed(1)}B`;
+    if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
+    if (num >= 1e3) return `${(num / 1e3).toFixed(0)}K`;
+    return num.toFixed(0);
+}
+
+/**
  * Get all pool analytics data from REAL SDK data only
  * 
  * @param {object} pool - Pool data from SDK
@@ -49,13 +63,21 @@ export function getPoolAnalytics(pool) {
     const tvl = dinamic.tvl || 0;
     const volume24h = dinamic.volume_usd_24h || dinamic.volume_24h || 0;
     const fees24h = dinamic.fees_usd_24h || 0;
-    const baseApr = dinamic.apr || 0;
-    const fullApr = pool.full_apr || 0;
-    const activeLiquidity = pool.liquidity ? BigInt(pool.liquidity) : 0n;
-    const activeLiquidityFromStats = dinamic.active_liquidity ? BigInt(dinamic.active_liquidity) : 0n;
 
-    // Fee tier (usually in decimal like 0.003 = 0.3%)
-    const feeTier = pool.fee || 0;
+    // Base APR from trading fees (dinamic_stats.apr)
+    const feeApr = dinamic.apr || 0;
+
+    // Full APR includes all yields (fees + oSAIL emissions + external rewards)
+    const fullApr = pool.full_apr || 0;
+
+    // Incentives APR is the difference between full APR and fee APR
+    // This includes oSAIL emissions + external rewards (SUI, etc.)
+    const incentivesApr = Math.max(0, fullApr - feeApr);
+
+    // Fee tier: SDK returns fee in basis points * 1000 (e.g., 1826 = 0.1826% = 18.26 bps)
+    // To convert to percentage: fee / 10000
+    const feeRaw = pool.fee || 0;
+    const feeTierPercent = feeRaw / 10000;
 
     // oSAIL emissions (convert from raw to human readable)
     const osail24hRaw = pool.distributed_osail_24h || 0;
@@ -63,6 +85,15 @@ export function getPoolAnalytics(pool) {
 
     // Current price (calculated in sdk.js)
     const currentPrice = pool.currentPrice || 0;
+
+    // Active liquidity in USD: derived from TVL and ratio of active to total liquidity
+    // active_liquidity is the liquidity in the current tick range
+    // pool.liquidity is total liquidity across all ticks
+    const activeLiq = BigInt(dinamic.active_liquidity || 0);
+    const totalLiq = BigInt(pool.liquidity || 1);
+    const activeLiquidityUsd = totalLiq > 0n
+        ? tvl * Number(activeLiq) / Number(totalLiq)
+        : 0;
 
     // External rewards (filter to non-zero APR)
     const externalRewards = (pool.rewards || [])
@@ -77,8 +108,8 @@ export function getPoolAnalytics(pool) {
     // Total external rewards APR
     const externalRewardsApr = externalRewards.reduce((sum, r) => sum + r.apr, 0);
 
-    // oSAIL APR (fullApr - baseApr - externalRewardsApr)
-    const osailApr = Math.max(0, fullApr - baseApr - externalRewardsApr);
+    // oSAIL APR (incentives minus external rewards)
+    const osailApr = Math.max(0, incentivesApr - externalRewardsApr);
 
     return {
         // Core metrics
@@ -90,10 +121,12 @@ export function getPoolAnalytics(pool) {
         fees24hFormatted: formatUSD(fees24h),
 
         // APR breakdown
-        baseApr,
-        baseAprFormatted: formatPercent(baseApr),
+        feeApr,
+        feeAprFormatted: formatPercent(feeApr),
         fullApr,
         fullAprFormatted: formatPercent(fullApr),
+        incentivesApr,
+        incentivesAprFormatted: formatPercent(incentivesApr),
         osailApr,
         osailAprFormatted: formatPercent(osailApr),
         externalRewardsApr,
@@ -106,14 +139,21 @@ export function getPoolAnalytics(pool) {
         osail24h,
         osail24hFormatted: osail24h >= 1000 ? `${(osail24h / 1000).toFixed(1)}K` : osail24h.toFixed(0),
 
-        // Price & liquidity
+        // Price
         currentPrice,
         currentPriceFormatted: formatPrice(currentPrice),
-        activeLiquidity: activeLiquidityFromStats.toString(),
 
-        // Fee tier
-        feeTier,
-        feeTierFormatted: `${(feeTier * 100).toFixed(2)}%`,
+        // Active liquidity as percentage of TVL (ratio of active to total liquidity)
+        activeLiquidityPercent: totalLiq > 0n
+            ? (Number(activeLiq) / Number(totalLiq)) * 100
+            : 0,
+        activeLiquidityPercentFormatted: totalLiq > 0n
+            ? `${((Number(activeLiq) / Number(totalLiq)) * 100).toFixed(1)}%`
+            : '—',
+
+        // Fee tier (as percentage, e.g., 0.18 for 0.18%)
+        feeTier: feeTierPercent,
+        feeTierFormatted: `${feeTierPercent.toFixed(2)}%`,
 
         // Token split (50/50 assumption - real data would need on-chain query)
         tokenSplit: {

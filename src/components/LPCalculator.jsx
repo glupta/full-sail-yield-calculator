@@ -4,6 +4,7 @@ import { loadInputs, saveInputs } from '../lib/persistence';
 import { fetchGaugePools } from '../lib/sdk';
 import { calculateTotalResults } from '../lib/scenario-calculator';
 import { roundToSigFigs } from '../lib/formatters';
+import { getDefaultPreset, getPriceRangeFromPercent } from '../lib/calculators/leverage-calculator';
 import { Plus } from 'lucide-react';
 
 // Generate unique IDs for scenarios
@@ -13,12 +14,13 @@ const generateScenarioId = () => `scenario_${++scenarioIdCounter}_${Date.now()}`
 const createDefaultScenario = () => ({
     id: generateScenarioId(),
     pool: null,
-    depositAmount: 5000,
+    depositAmount: 10000,
     priceRangeLow: null,
     priceRangeHigh: null,
     exitPrice: null,
     timeline: 30,
     osailStrategy: 70,
+    aprOverride: null, // null = use SDK-calculated APR, number = user override
 });
 
 // Loading Skeleton Component
@@ -81,16 +83,22 @@ export default function LPCalculator() {
                     }
                     // Ensure timeline has a default value (may be missing from legacy saved data)
                     const timeline = scenario.timeline ?? 30;
-                    return { ...scenario, id, pool, timeline };
+                    // Ensure aprOverride is preserved (null for legacy data)
+                    const aprOverride = scenario.aprOverride ?? null;
+                    return { ...scenario, id, pool, timeline, aprOverride };
                 });
                 setScenarios(restoredScenarios);
             } else if (fetchedPools.length > 0) {
                 const pool = fetchedPools[0];
+                const defaultPreset = getDefaultPreset();
+                const range = pool?.currentPrice
+                    ? getPriceRangeFromPercent(pool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct)
+                    : { priceLow: null, priceHigh: null };
                 setScenarios([{
                     ...createDefaultScenario(),
                     pool,
-                    priceRangeLow: pool?.currentPrice ? roundToSigFigs(pool.currentPrice * 0.75) : null,
-                    priceRangeHigh: pool?.currentPrice ? roundToSigFigs(pool.currentPrice * 1.25) : null,
+                    priceRangeLow: range.priceLow ? roundToSigFigs(range.priceLow, 4) : null,
+                    priceRangeHigh: range.priceHigh ? roundToSigFigs(range.priceHigh, 4) : null,
                 }]);
             }
 
@@ -118,8 +126,11 @@ export default function LPCalculator() {
             if (updates.pool && updates.pool !== s.pool) {
                 const pool = updates.pool;
                 if (pool?.currentPrice) {
-                    updated.priceRangeLow = roundToSigFigs(pool.currentPrice * 0.75);
-                    updated.priceRangeHigh = roundToSigFigs(pool.currentPrice * 1.25);
+                    const defaultPreset = getDefaultPreset();
+                    const range = getPriceRangeFromPercent(pool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct);
+                    updated.priceRangeLow = roundToSigFigs(range.priceLow, 4);
+                    updated.priceRangeHigh = roundToSigFigs(range.priceHigh, 4);
+                    updated.aprOverride = null; // Reset APR override when pool changes
                 }
             }
             return updated;
@@ -129,11 +140,15 @@ export default function LPCalculator() {
     const addScenario = () => {
         if (scenarios.length < 3) {
             const firstPool = scenarios[0]?.pool;
+            const defaultPreset = getDefaultPreset();
+            const range = firstPool?.currentPrice
+                ? getPriceRangeFromPercent(firstPool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct)
+                : { priceLow: null, priceHigh: null };
             const newScenario = {
                 ...createDefaultScenario(),
                 pool: firstPool,
-                priceRangeLow: firstPool?.currentPrice ? roundToSigFigs(firstPool.currentPrice * 0.75) : null,
-                priceRangeHigh: firstPool?.currentPrice ? roundToSigFigs(firstPool.currentPrice * 1.25) : null,
+                priceRangeLow: range.priceLow ? roundToSigFigs(range.priceLow, 4) : null,
+                priceRangeHigh: range.priceHigh ? roundToSigFigs(range.priceHigh, 4) : null,
             };
             setScenarios([...scenarios, newScenario]);
         }

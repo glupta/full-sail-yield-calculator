@@ -91,16 +91,16 @@ describe('calculateLeverage', () => {
             expect(veryNarrowLeverage).toBeGreaterThan(narrowLeverage);
         });
 
-        it('should calculate ±10% range leverage around 20x (Full Sail formula)', () => {
+        it('should calculate ±10% range leverage around 19.5x (Full Sail formula)', () => {
             const leverage = calculateLeverage(1, 0.9, 1.1);
-            // ±10% range: L = 1/(1-sqrt(0.9)) ≈ 19.5x
-            expect(leverage).toBeCloseTo(20, 0);
+            // ±10% range: L = 1/(1-sqrt(0.9)) ≈ 19.49x
+            expect(leverage).toBeCloseTo(19.49, 1);
         });
 
-        it('should calculate ±1% range leverage around 200x (Full Sail formula)', () => {
+        it('should calculate ±1% range leverage around 199.5x (Full Sail formula)', () => {
             const leverage = calculateLeverage(1, 0.99, 1.01);
-            // ±1% range: L = 1/(1-sqrt(0.99)) ≈ 199x
-            expect(leverage).toBeCloseTo(200, 0);
+            // ±1% range: L = 1/(1-sqrt(0.99)) ≈ 199.5x
+            expect(leverage).toBeCloseTo(199.5, 0);
         });
 
         it('should return minimum of 1 for very wide ranges', () => {

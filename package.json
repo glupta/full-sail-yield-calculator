@@ -11,8 +11,8 @@
         "test:run": "vitest run"
     },
     "dependencies": {
-        "@fullsailfinance/sdk": "^1.0.0",
-        "lucide-react": "^0.263.1",
+        "@fullsailfinance/sdk": "^6.0.0",
+        "lucide-react": "^0.562.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "recharts": "^3.6.0"
