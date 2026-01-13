@@ -29,7 +29,7 @@ export interface SailInvestorMetrics {
 
     // Derived Metrics
     feeEmissionRatio: number;
-    capitalEfficiency: number; // Volume / TVL
+    capitalEfficiency: number; // Fees / TVL (annualized)
 
     // Emission Analysis
     weeklyEmissionsUsd: number;
@@ -76,9 +76,9 @@ export async function GET() {
             totalVolume24h += stats.volume_usd_24h || 0;
             totalFees24h += stats.fees_usd_24h || 0;
 
-            // oSAIL emissions (stored as raw value with 9 decimals typically)
+            // oSAIL emissions (stored as raw value with 6 decimals - same as SAIL)
             if (pool.distributed_osail_24h) {
-                const osailAmount = Number(pool.distributed_osail_24h) / 1e9;
+                const osailAmount = Number(pool.distributed_osail_24h) / 1e6;
                 totalOsailEmissions24h += osailAmount;
             }
         }
@@ -105,9 +105,9 @@ export async function GET() {
             ? lastWeekFeesUsd / weeklyEmissionsUsd
             : 0;
 
-        // Capital efficiency
+        // Capital efficiency (annualized fee yield on TVL)
         const capitalEfficiency = totalTvl > 0
-            ? totalVolume24h / totalTvl
+            ? (totalFees24h * 365) / totalTvl
             : 0;
 
         const metrics: SailInvestorMetrics = {

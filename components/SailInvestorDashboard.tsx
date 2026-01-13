@@ -327,10 +327,10 @@ export default function SailInvestorDashboard() {
                         tooltip="Number of active gauge-enabled liquidity pools"
                     />
                     <MetricRow
-                        label="Capital Efficiency"
-                        value={metrics.capitalEfficiency.toFixed(2) + 'x'}
-                        valueColor={metrics.capitalEfficiency > 0.5 ? 'var(--color-success)' : undefined}
-                        tooltip="Volume/TVL ratio. Higher = liquidity is being used more efficiently."
+                        label="Fee Yield"
+                        value={formatPercent(metrics.capitalEfficiency)}
+                        valueColor={metrics.capitalEfficiency > 0.1 ? 'var(--color-success)' : undefined}
+                        tooltip="Annualized fee yield on TVL. (24h Fees × 365) / TVL"
                     />
                 </div>
 
