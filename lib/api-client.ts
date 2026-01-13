@@ -124,3 +124,33 @@ export async function fetchConfig(): Promise<ProtocolConfig | null> {
         return null;
     }
 }
+
+export interface SailInvestorMetrics {
+    sailPrice: number;
+    totalLockedSail: number;
+    lockedValueUsd: number;
+    lockRate: number | null;
+    lastWeekFeesUsd: number;
+    votingApr: number;
+    totalTvl: number;
+    totalVolume24h: number;
+    totalFees24h: number;
+    totalOsailEmissions24h: number;
+    poolCount: number;
+    feeEmissionRatio: number;
+    capitalEfficiency: number;
+    weeklyEmissionsUsd: number;
+    annualizedEmissionRate: number | null;
+    lastUpdated: string;
+}
+
+/**
+ * Fetch aggregated SAIL investor metrics
+ */
+export async function fetchSailMetrics(): Promise<SailInvestorMetrics> {
+    const res = await fetch('/api/sail-metrics');
+    if (!res.ok) {
+        throw new Error(`Failed to fetch SAIL metrics: ${res.status}`);
+    }
+    return res.json();
+}

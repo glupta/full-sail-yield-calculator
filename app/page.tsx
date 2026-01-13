@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import LPCalculator from '@/components/LPCalculator';
-import TokenBuyerCalculator from '@/components/TokenBuyerCalculator';
+import SailInvestorDashboard from '@/components/SailInvestorDashboard';
 import VeSailMarketPanel from '@/components/VeSailMarketPanel';
 import PersonaToggle from '@/components/PersonaToggle';
 import { Heart, ExternalLink } from 'lucide-react';
@@ -84,7 +84,7 @@ function HomeContent() {
             {/* Main Content */}
             <main>
                 {persona === 'lp' && <LPCalculator />}
-                {persona === 'buyer' && <TokenBuyerCalculator />}
+                {persona === 'buyer' && <SailInvestorDashboard />}
                 {persona === 'vesail' && <VeSailMarketPanel />}
             </main>
 
