@@ -608,7 +608,8 @@ export default function ScenarioPanel({
 
                             // Use sailAPR directly from results (already correctly calculated)
                             const sailAPR = results.sailAPR || 0;
-                            const incentivesAPR = annualizeAPR(results.externalRewardsValue || 0);
+                            // Sum up actual APRs from external rewards (already leverage-adjusted)
+                            const incentivesAPR = results.externalRewards?.reduce((sum, r) => sum + (r.apr || 0), 0) || 0;
                             const ilAPR = annualizeAPR(results.ilDollar);
                             const netAPR = annualizeAPR(results.netYield);
 
@@ -708,7 +709,7 @@ export default function ScenarioPanel({
                                                     <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 'var(--space-md)', padding: '4px 0', fontSize: '0.7rem' }}>
                                                         <span className="text-muted">{reward.token}</span>
                                                         <span className="text-success" style={{ textAlign: 'right', minWidth: '80px' }}>{formatUsd(reward.projectedValue)}</span>
-                                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{calcAPR(reward.projectedValue).toFixed(1)}%</span>
+                                                        <span className="text-success" style={{ textAlign: 'right', minWidth: '60px' }}>{(reward.apr || 0).toFixed(1)}%</span>
                                                     </div>
                                                 ))}
                                             </div>
