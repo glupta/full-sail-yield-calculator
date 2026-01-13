@@ -67,26 +67,66 @@ export default function VeSailMarketPanel() {
     }));
 
     return (
-        <div className="vesail-market">
-            {/* Market KPIs */}
-            <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+        <div className="vesail-market" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+            {/* Header with Hero Stats */}
+            <div className="glass-card">
                 <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.25rem' }}>veSAIL Secondary Market</h2>
-                    <button
-                        onClick={fetchData}
-                        className="btn btn-ghost"
-                        style={{ padding: 'var(--space-xs)' }}
-                        title="Refresh data"
-                    >
-                        <RefreshCw size={16} />
-                    </button>
+                    <div>
+                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>veSAIL Secondary Market</h2>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            Buy veSAIL positions at a discount on Tradeport
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-sm">
+                        <span style={{
+                            fontSize: '0.65rem',
+                            color: 'var(--color-success)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            <span style={{
+                                width: '6px',
+                                height: '6px',
+                                background: 'var(--color-success)',
+                                borderRadius: '50%',
+                            }}></span>
+                            LIVE
+                        </span>
+                        <button
+                            onClick={fetchData}
+                            className="btn btn-ghost"
+                            style={{ padding: 'var(--space-xs)' }}
+                            title="Refresh data"
+                        >
+                            <RefreshCw size={16} />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="stats-grid" style={{
+                {/* Hero Stats Grid */}
+                <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: 'var(--space-md)'
+                    gap: 'var(--space-md)',
                 }}>
+                    <StatCard
+                        label="veSAIL Price"
+                        value={`${stats.veSailPriceInSail?.toFixed(2) || 'N/A'} SAIL`}
+                        sublabel={stats.veSailPriceInSail < 1 ? `${(100 - stats.veSailPriceInSail * 100).toFixed(0)}% discount` : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
+                        icon={null}
+                        positive={stats.veSailPriceInSail < 1}
+                        highlight={true}
+                        tooltip="Weighted average veSAIL price in SAIL terms based on recent trades"
+                    />
+                    <StatCard
+                        label="Best Trade"
+                        value={`${stats.bestDiscountPct > 0 ? '-' : '+'}${Math.abs(stats.bestDiscountPct).toFixed(0)}%`}
+                        sublabel={stats.bestDiscountPct > 0 ? 'discount' : 'premium'}
+                        icon={stats.bestDiscountPct > 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
+                        positive={stats.bestDiscountPct > 0}
+                        tooltip="Best discount or premium seen vs SAIL spot price"
+                    />
                     <StatCard
                         label="Total Sales"
                         value={stats.totalSales}
@@ -99,22 +139,6 @@ export default function VeSailMarketPanel() {
                         icon={<ShoppingCart size={18} />}
                         tooltip="Total SUI volume traded on secondary market"
                     />
-                    <StatCard
-                        label="Best Trade"
-                        value={`${stats.bestDiscountPct > 0 ? '-' : '+'}${Math.abs(stats.bestDiscountPct).toFixed(0)}%`}
-                        sublabel={stats.bestDiscountPct > 0 ? 'discount' : 'premium'}
-                        icon={stats.bestDiscountPct > 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
-                        positive={stats.bestDiscountPct > 0}
-                        tooltip="Best discount or premium seen vs SAIL spot price"
-                    />
-                    <StatCard
-                        label="veSAIL Price"
-                        value={`${stats.veSailPriceInSail?.toFixed(2) || 'N/A'} SAIL`}
-                        sublabel={stats.veSailPriceInSail < 1 ? `${(100 - stats.veSailPriceInSail * 100).toFixed(0)}% discount` : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
-                        icon={null}
-                        positive={stats.veSailPriceInSail < 1}
-                        tooltip="Weighted average veSAIL price in SAIL terms based on recent trades"
-                    />
                 </div>
             </div>
 
@@ -122,27 +146,27 @@ export default function VeSailMarketPanel() {
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-                gap: 'var(--space-lg)'
+                gap: 'var(--space-lg)',
             }}>
                 {/* Listings Table */}
-                <div className="card">
-                    <h3 style={{ marginTop: 0, marginBottom: 'var(--space-md)', fontSize: '1rem' }}>
+                <div className="glass-card">
+                    <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
+                        <ShoppingCart size={18} style={{ color: 'var(--color-primary)' }} />
                         Current Listings
                         <span style={{
-                            fontSize: '0.75rem',
+                            fontSize: '0.7rem',
                             color: 'var(--text-muted)',
                             fontWeight: 'normal',
-                            marginLeft: 'var(--space-sm)'
                         }}>
                             Sorted by best deal
                         </span>
                     </h3>
 
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="data-table" style={{ width: '100%', fontSize: '0.875rem' }}>
+                    <div style={{ overflowX: 'auto', marginTop: 'var(--space-md)' }}>
+                        <table className="data-table" style={{ width: '100%', fontSize: '0.85rem' }}>
                             <thead>
                                 <tr>
-                                    <th style={{ width: '50px' }}>#</th>
+                                    <th style={{ width: '40px' }}>#</th>
                                     <th style={{ textAlign: 'right' }}>Price</th>
                                     <th style={{ textAlign: 'right' }}>SAIL</th>
                                     <th style={{ textAlign: 'right' }}>vs Spot</th>
@@ -160,12 +184,12 @@ export default function VeSailMarketPanel() {
                                 ) : (
                                     listings.slice(0, 10).map((listing, i) => (
                                         <tr key={listing.tokenId}>
-                                            <td style={{ color: 'var(--text-muted)' }}>#{i + 1}</td>
+                                            <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
                                             <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
                                                 {listing.priceSui.toFixed(2)} SUI
                                             </td>
                                             <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>
-                                                {listing.lockedSail.toLocaleString()}
+                                                {listing.lockedSail >= 1000 ? `${(listing.lockedSail / 1000).toFixed(1)}K` : listing.lockedSail.toFixed(0)}
                                             </td>
                                             <td style={{
                                                 textAlign: 'right',
@@ -176,12 +200,12 @@ export default function VeSailMarketPanel() {
                                                 {Math.abs(listing.discountPct).toFixed(0)}%
                                             </td>
                                             <td>
-                                                <span className="badge" style={{
+                                                <span style={{
                                                     background: listing.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)',
                                                     color: listing.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)',
                                                     padding: '2px 8px',
                                                     borderRadius: '4px',
-                                                    fontSize: '0.75rem'
+                                                    fontSize: '0.7rem'
                                                 }}>
                                                     {listing.lockType}
                                                 </span>
@@ -192,9 +216,9 @@ export default function VeSailMarketPanel() {
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="btn btn-ghost"
-                                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                                    style={{ padding: '4px 8px', fontSize: '0.7rem' }}
                                                 >
-                                                    Buy <ExternalLink size={12} />
+                                                    Buy <ExternalLink size={10} />
                                                 </a>
                                             </td>
                                         </tr>
@@ -208,11 +232,12 @@ export default function VeSailMarketPanel() {
                 {/* Right column: Chart + Sales History */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
                     {/* Scatter Chart */}
-                    <div className="card">
-                        <h3 style={{ marginTop: 0, marginBottom: 'var(--space-md)', fontSize: '1rem' }}>
+                    <div className="glass-card">
+                        <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
+                            <TrendingUp size={18} style={{ color: 'var(--color-primary)' }} />
                             Discount vs Size
                         </h3>
-                        <div style={{ height: '200px' }}>
+                        <div style={{ height: '180px', marginTop: 'var(--space-sm)' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <ScatterChart margin={{ top: 10, right: 10, bottom: 20, left: 0 }}>
                                     <XAxis
@@ -228,7 +253,7 @@ export default function VeSailMarketPanel() {
                                         dataKey="discount"
                                         tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                                         tickFormatter={(v) => `${v > 0 ? '-' : '+'}${Math.abs(v).toFixed(0)}%`}
-                                        width={45}
+                                        width={40}
                                     />
                                     <ReferenceLine y={0} stroke="var(--border-default)" strokeDasharray="3 3" />
                                     <Tooltip content={<CustomTooltip />} />
@@ -243,11 +268,12 @@ export default function VeSailMarketPanel() {
                     </div>
 
                     {/* Recent Sales */}
-                    <div className="card" style={{ flex: 1 }}>
-                        <h3 style={{ marginTop: 0, marginBottom: 'var(--space-md)', fontSize: '1rem' }}>
+                    <div className="glass-card" style={{ flex: 1 }}>
+                        <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem', margin: 0 }}>
+                            <Activity size={18} style={{ color: 'var(--color-primary)' }} />
                             Recent Sales
                         </h3>
-                        <div style={{ fontSize: '0.8rem' }}>
+                        <div style={{ fontSize: '0.8rem', marginTop: 'var(--space-sm)' }}>
                             {recentSales.slice(0, 5).map((sale, i) => (
                                 <div
                                     key={i}
@@ -258,18 +284,20 @@ export default function VeSailMarketPanel() {
                                         borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none'
                                     }}
                                 >
-                                    <span style={{ color: 'var(--text-muted)' }}>
+                                    <span style={{ color: 'var(--text-muted)', minWidth: '60px' }}>
                                         {new Date(sale.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                     </span>
-                                    <span style={{ fontFamily: 'var(--font-mono)' }}>
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '60px', textAlign: 'right' }}>
                                         {sale.priceSui.toFixed(1)} SUI
                                     </span>
-                                    <span style={{ fontFamily: 'var(--font-mono)' }}>
-                                        {sale.lockedSail.toLocaleString()}
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '50px', textAlign: 'right' }}>
+                                        {sale.lockedSail >= 1000 ? `${(sale.lockedSail / 1000).toFixed(1)}K` : sale.lockedSail.toFixed(0)}
                                     </span>
                                     <span style={{
                                         fontFamily: 'var(--font-mono)',
-                                        color: sale.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)'
+                                        color: sale.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)',
+                                        minWidth: '45px',
+                                        textAlign: 'right'
                                     }}>
                                         {sale.discountPct > 0 ? '-' : '+'}
                                         {Math.abs(sale.discountPct).toFixed(0)}%
@@ -295,10 +323,13 @@ export default function VeSailMarketPanel() {
     );
 }
 
-function StatCard({ label, value, sublabel, icon, positive, tooltip }) {
+function StatCard({ label, value, sublabel, icon, positive, tooltip, highlight }) {
     return (
         <div style={{
-            background: 'var(--surface-elevated)',
+            background: highlight
+                ? 'linear-gradient(135deg, rgba(0, 160, 255, 0.1) 0%, rgba(10, 22, 40, 0.8) 100%)'
+                : 'var(--surface-elevated)',
+            border: highlight ? '1px solid rgba(0, 160, 255, 0.25)' : 'none',
             borderRadius: 'var(--radius-md)',
             padding: 'var(--space-md)',
             textAlign: 'center'
@@ -327,7 +358,7 @@ function StatCard({ label, value, sublabel, icon, positive, tooltip }) {
                 fontFamily: 'var(--font-mono)',
                 color: positive !== undefined
                     ? (positive ? 'var(--color-success)' : 'var(--color-warning)')
-                    : 'var(--text-primary)'
+                    : (highlight ? 'var(--color-success)' : 'var(--text-primary)')
             }}>
                 {value}
             </div>
