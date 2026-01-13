@@ -266,7 +266,10 @@ export default function ScenarioPanel({
             {/* Deposit Amount & Exit Price - Responsive stack on mobile */}
             <div className="price-range-inline mb-md" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
                 <div className="price-range-field">
-                    <label className="price-range-field-label">Deposit Amount</label>
+                    <label className="price-range-field-label">
+                        Deposit Amount
+                        <Tooltip text="The USD value you plan to deposit into this liquidity position." />
+                    </label>
                     <div style={{ position: 'relative' }}>
                         <span style={{
                             position: 'absolute',
@@ -342,7 +345,10 @@ export default function ScenarioPanel({
             {/* Price Range */}
             <div className="input-group mb-md">
                 <div className="input-group-label">
-                    <span>Price Range</span>
+                    <span>
+                        Price Range
+                        <Tooltip text="The min/max prices where your liquidity is active. Tighter ranges earn more fees but risk going out of range." />
+                    </span>
                 </div>
 
                 {/* Inline Layout: Preset Dropdown | Low | High */}

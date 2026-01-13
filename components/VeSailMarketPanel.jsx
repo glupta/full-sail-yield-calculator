@@ -5,7 +5,7 @@
  * Inspired by Vexy.fi design patterns
  */
 import { useState, useEffect } from 'react';
-import { TrendingDown, TrendingUp, Activity, ShoppingCart, ExternalLink, RefreshCw } from 'lucide-react';
+import { TrendingDown, TrendingUp, Activity, ShoppingCart, ExternalLink, RefreshCw, HelpCircle } from 'lucide-react';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 export default function VeSailMarketPanel() {
@@ -91,11 +91,13 @@ export default function VeSailMarketPanel() {
                         label="Total Sales"
                         value={stats.totalSales}
                         icon={<Activity size={18} />}
+                        tooltip="Number of veSAIL NFTs traded on secondary market"
                     />
                     <StatCard
                         label="Volume"
                         value={`${stats.totalVolumeSui.toFixed(0)} SUI`}
                         icon={<ShoppingCart size={18} />}
+                        tooltip="Total SUI volume traded on secondary market"
                     />
                     <StatCard
                         label="Best Trade"
@@ -103,12 +105,14 @@ export default function VeSailMarketPanel() {
                         sublabel={stats.bestDiscountPct > 0 ? 'discount' : 'premium'}
                         icon={stats.bestDiscountPct > 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
                         positive={stats.bestDiscountPct > 0}
+                        tooltip="Best discount or premium seen vs SAIL spot price"
                     />
                     <StatCard
                         label="SAIL Spot"
                         value={`${(stats.sailSpotPriceSui * 1000).toFixed(2)}m SUI`}
                         sublabel="per 1 SAIL"
                         icon={null}
+                        tooltip="Current SAIL spot price in milli-SUI (SUI × 1000)"
                     />
                 </div>
             </div>
@@ -290,7 +294,7 @@ export default function VeSailMarketPanel() {
     );
 }
 
-function StatCard({ label, value, sublabel, icon, positive }) {
+function StatCard({ label, value, sublabel, icon, positive, tooltip }) {
     return (
         <div style={{
             background: 'var(--surface-elevated)',
@@ -309,6 +313,12 @@ function StatCard({ label, value, sublabel, icon, positive }) {
             }}>
                 {icon}
                 {label}
+                {tooltip && (
+                    <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                        <HelpCircle size={10} className="tooltip-icon" />
+                        <span className="tooltip-text">{tooltip}</span>
+                    </span>
+                )}
             </div>
             <div style={{
                 fontSize: '1.5rem',
