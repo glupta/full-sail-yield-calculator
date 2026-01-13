@@ -128,13 +128,23 @@ export async function GET() {
 
         // Supply metrics (with 6 decimals)
         const circulatingSupply = Number(supply.sail_circulating_supply || 0) / 1e6;
+        const vesailSupply = Number(supply.vesail_supply || 0) / 1e6; // Total veSAIL voting power
         const avgLockDurationDays = supply.avg_lock_duration_days || 0;
         const avgVotingApr = statistics.avg_voting_apr || 0;
         const cumulativeEmissionsUsd = Number(overview.cumulative_osail_emissions_usd || 0);
 
-        // Lock rate
-        const lockRate = circulatingSupply > 0
-            ? totalLockedSail / circulatingSupply
+        // Estimate actual locked SAIL from veSAIL voting power
+        // veSAIL voting power = lockedSAIL * (lockDays / maxLockDays) where maxLock = 4 years
+        const maxLockDays = 4 * 365;
+        const avgVotingMultiplier = avgLockDurationDays > 0 ? avgLockDurationDays / maxLockDays : 1;
+        const estimatedLockedSail = vesailSupply > 0 ? vesailSupply / avgVotingMultiplier : totalLockedSail;
+
+        // Total supply = circulating + locked
+        const totalSupply = circulatingSupply + estimatedLockedSail;
+
+        // Lock rate = locked SAIL / total SAIL supply
+        const lockRate = totalSupply > 0
+            ? estimatedLockedSail / totalSupply
             : 0;
 
         // Market cap
