@@ -352,14 +352,17 @@ export default function VeSailMarketPanel() {
                                     <XAxis
                                         dataKey="lockedSail"
                                         type="number"
-                                        scale="log"
-                                        domain={['auto', 'auto']}
+                                        name="SAIL"
+                                        domain={['dataMin', 'dataMax']}
                                         tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                                        tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v}
+                                        tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : Math.round(v)}
                                         label={{ value: 'Locked SAIL', position: 'bottom', fontSize: 10, fill: 'var(--text-muted)' }}
                                     />
                                     <YAxis
                                         dataKey="discount"
+                                        type="number"
+                                        name="Discount"
+                                        domain={['dataMin', 'dataMax']}
                                         tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                                         tickFormatter={(v) => `${v > 0 ? '-' : '+'}${Math.abs(v).toFixed(0)}%`}
                                         width={40}
@@ -369,14 +372,12 @@ export default function VeSailMarketPanel() {
                                     <Scatter
                                         name="Listings"
                                         data={listingsChartData}
-                                        fill="var(--color-primary)"
-                                        fillOpacity={0.7}
+                                        fill="#00a0ff"
                                     />
                                     <Scatter
                                         name="Sales"
                                         data={salesChartData}
-                                        fill="var(--color-success)"
-                                        fillOpacity={0.7}
+                                        fill="#10b981"
                                     />
                                 </ScatterChart>
                             </ResponsiveContainer>
