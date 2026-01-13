@@ -7,12 +7,9 @@ export default defineConfig({
     plugins: [
         react(),
         nodePolyfills({
-            // Required for Full Sail SDK which uses https.Agent and buffer
-            include: ['buffer', 'https', 'http', 'stream', 'util', 'url', 'events'],
-            globals: {
-                Buffer: true,
-                process: true,
-            },
+            // Polyfill all Node.js modules for SDK compatibility
+            // The SDK uses Axios which depends on EventEmitter
+            protocolImports: true,
         }),
     ],
     resolve: {
@@ -21,6 +18,12 @@ export default defineConfig({
             '@fullsailfinance/sdk': path.resolve(
                 './node_modules/@fullsailfinance/sdk/dist/index.js'
             ),
+        },
+    },
+    build: {
+        // Ensure CommonJS modules are properly handled
+        commonjsOptions: {
+            transformMixedEsModules: true,
         },
     },
     test: {
