@@ -35,6 +35,17 @@ const formatCompact = (val: number) => {
 const formatPercent = (val: number) => `${(val * 100).toFixed(1)}%`;
 const formatNumber = (val: number) => val.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
+// Tooltip component using existing CSS classes
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+    return (
+        <span className="tooltip-wrapper">
+            {children}
+            <Info size={12} className="tooltip-icon" style={{ marginLeft: '4px' }} />
+            <span className="tooltip-text">{text}</span>
+        </span>
+    );
+}
+
 // Loading Skeleton
 function DashboardSkeleton() {
     return (
@@ -75,20 +86,16 @@ function HeroMetric({
     tooltip?: string;
 }) {
     return (
-        <div
-            style={{
-                background: highlight
-                    ? 'linear-gradient(135deg, rgba(0, 160, 255, 0.1) 0%, rgba(10, 22, 40, 0.8) 100%)'
-                    : 'var(--surface-elevated)',
-                border: highlight ? '1px solid rgba(0, 160, 255, 0.25)' : '1px solid var(--border-subtle)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-lg)',
-                textAlign: 'center',
-                opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
-                cursor: tooltip ? 'help' : 'default',
-            }}
-            title={tooltip}
-        >
+        <div style={{
+            background: highlight
+                ? 'linear-gradient(135deg, rgba(0, 160, 255, 0.1) 0%, rgba(10, 22, 40, 0.8) 100%)'
+                : 'var(--surface-elevated)',
+            border: highlight ? '1px solid rgba(0, 160, 255, 0.25)' : '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-lg)',
+            textAlign: 'center',
+            opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
+        }}>
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -99,8 +106,7 @@ function HeroMetric({
                 color: 'var(--text-muted)',
             }}>
                 {icon}
-                {label}
-                {tooltip && <Info size={10} style={{ opacity: 0.5 }} />}
+                {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
                 {isPlaceholder && <span style={{ color: PLACEHOLDER_COLOR, fontSize: '0.6rem' }}>TBD</span>}
             </div>
             <div style={{
@@ -129,19 +135,13 @@ function MetricRow({ label, value, valueColor, isPlaceholder = false, tooltip }:
     tooltip?: string;
 }) {
     return (
-        <div
-            className="flex justify-between"
-            style={{
-                padding: 'var(--space-xs) 0',
-                opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
-                cursor: tooltip ? 'help' : 'default',
-            }}
-            title={tooltip}
-        >
-            <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {label}
-                {tooltip && <Info size={10} style={{ opacity: 0.4 }} />}
-                {isPlaceholder && <span style={{ color: PLACEHOLDER_COLOR, fontSize: '0.65rem' }}>TBD</span>}
+        <div className="flex justify-between" style={{
+            padding: 'var(--space-xs) 0',
+            opacity: isPlaceholder ? PLACEHOLDER_OPACITY : 1,
+        }}>
+            <span className="text-muted" style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center' }}>
+                {tooltip ? <Tooltip text={tooltip}>{label}</Tooltip> : label}
+                {isPlaceholder && <span style={{ color: PLACEHOLDER_COLOR, marginLeft: '4px', fontSize: '0.65rem' }}>TBD</span>}
             </span>
             <span style={{
                 fontWeight: 600,
@@ -319,7 +319,7 @@ export default function SailInvestorDashboard() {
                     <MetricRow
                         label="24h Fees"
                         value={formatCompact(metrics.totalFees24h)}
-                        tooltip="Fees generated in the last 24 hours. 95% goes to veSAIL voters, 5% to insurance."
+                        tooltip="Fees generated in the last 24 hours. 95% goes to veSAIL voters."
                     />
                     <MetricRow
                         label="Pools"
@@ -379,7 +379,7 @@ export default function SailInvestorDashboard() {
                     <MetricRow
                         label="Daily oSAIL"
                         value={formatNumber(metrics.totalOsailEmissions24h)}
-                        tooltip="oSAIL tokens distributed to LPs per day. Dynamic based on prediction accuracy."
+                        tooltip="oSAIL tokens distributed to LPs per day"
                     />
                     <MetricRow
                         label="Weekly Emissions"
@@ -390,13 +390,13 @@ export default function SailInvestorDashboard() {
                         label="Circulating Supply"
                         value="—"
                         isPlaceholder={true}
-                        tooltip="SAIL tokens currently in circulation. Requires external data source."
+                        tooltip="SAIL tokens currently in circulation. Requires external data."
                     />
                     <MetricRow
                         label="Total Supply"
                         value="—"
                         isPlaceholder={true}
-                        tooltip="Maximum SAIL token supply. Requires external data source."
+                        tooltip="Maximum SAIL token supply. Requires external data."
                     />
                     <MetricRow
                         label="Market Cap"
