@@ -145,7 +145,7 @@ export default function VeSailMarketPanel() {
             {/* Main content grid */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+                gridTemplateColumns: '1fr 1fr',
                 gap: 'var(--space-lg)',
             }}>
                 {/* Listings Table */}
@@ -168,7 +168,7 @@ export default function VeSailMarketPanel() {
                                 <tr>
                                     <th style={{ width: '40px' }}>#</th>
                                     <th style={{ textAlign: 'right' }}>Price</th>
-                                    <th style={{ textAlign: 'right' }}>SAIL</th>
+                                    <th style={{ textAlign: 'right' }}>Locked SAIL</th>
                                     <th style={{ textAlign: 'right' }}>vs Spot</th>
                                     <th>Lock</th>
                                     <th style={{ width: '60px' }}></th>
@@ -237,7 +237,24 @@ export default function VeSailMarketPanel() {
                             <Activity size={18} style={{ color: 'var(--color-primary)' }} />
                             Recent Sales
                         </h3>
-                        <div style={{ fontSize: '0.8rem', marginTop: 'var(--space-sm)' }}>
+                        {/* Column Headers */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            fontSize: '0.65rem',
+                            color: 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            marginTop: 'var(--space-sm)',
+                            paddingBottom: 'var(--space-xs)',
+                            borderBottom: '1px solid var(--border-subtle)'
+                        }}>
+                            <span style={{ minWidth: '60px' }}>Date</span>
+                            <span style={{ minWidth: '60px', textAlign: 'right' }}>Price</span>
+                            <span style={{ minWidth: '50px', textAlign: 'right' }}>SAIL</span>
+                            <span style={{ minWidth: '45px', textAlign: 'right' }}>vs Spot</span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem' }}>
                             {recentSales.slice(0, 5).map((sale, i) => (
                                 <div
                                     key={i}
