@@ -606,6 +606,48 @@ export default function ScenarioPanel({
                     <span className={scenario.osailStrategy < 50 ? 'active' : ''}>Redeem {100 - scenario.osailStrategy}%</span>
                     <span className={scenario.osailStrategy >= 50 ? 'active' : ''}>Lock {scenario.osailStrategy}%</span>
                 </div>
+                {scenario.osailStrategy < 100 && results && (
+                    (() => {
+                        // Calculate how much more the user could earn with 100% lock
+                        // Lock gives 2x value vs redeem (which is 50% of spot)
+                        // Current: redeemPct * 0.5 + lockPct * 1.0 (relative to oSAIL spot value)
+                        // At 100% lock: 0 * 0.5 + 1.0 * 1.0 = 1.0
+                        const currentLockPct = scenario.osailStrategy / 100;
+                        const currentRedeemPct = 1 - currentLockPct;
+                        const currentMultiplier = currentRedeemPct * 0.5 + currentLockPct * 1.0;
+                        const fullLockMultiplier = 1.0;
+
+                        // Get the raw oSAIL value (before strategy multiplier)
+                        // osailValue = rawOsailValue * currentMultiplier
+                        // So rawOsailValue = osailValue / currentMultiplier
+                        const rawOsailValue = currentMultiplier > 0 ? results.osailValue / currentMultiplier : results.osailValue * 2;
+                        const potentialValue = rawOsailValue * fullLockMultiplier;
+                        const additionalValue = potentialValue - results.osailValue;
+
+                        // Calculate additional APR
+                        const timeline = scenario.timeline || 30;
+                        const additionalAPR = scenario.depositAmount > 0
+                            ? (additionalValue * (365 / timeline) / scenario.depositAmount) * 100
+                            : 0;
+
+                        if (additionalValue <= 0) return null;
+
+                        return (
+                            <div style={{
+                                marginTop: 'var(--space-xs)',
+                                padding: 'var(--space-xs) var(--space-sm)',
+                                fontSize: '0.7rem',
+                                color: 'var(--color-success)',
+                                background: 'rgba(34, 197, 94, 0.08)',
+                                borderRadius: 'var(--radius-sm)',
+                                textAlign: 'center',
+                                fontWeight: 500
+                            }}>
+                                🚀 Lock 100% to earn +${additionalValue.toFixed(0)} more (+{additionalAPR.toFixed(0)}% APR)
+                            </div>
+                        );
+                    })()
+                )}
             </div>
 
             {/* Results */}

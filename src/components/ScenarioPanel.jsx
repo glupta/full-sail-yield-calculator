@@ -41,6 +41,12 @@ export default function ScenarioPanel({
     const [sdkAPR, setSdkAPR] = useState(null);
     const [isLoadingAPR, setIsLoadingAPR] = useState(false);
 
+    // Reset preset to Balanced when pool changes
+    useEffect(() => {
+        setSelectedPreset('Balanced');
+        setSdkAPR(null); // Clear APR when pool changes
+    }, [pool?.id]);
+
     // Trigger SDK APR calculation when inputs change
     useEffect(() => {
         console.log('[APR Effect Triggered]', {
@@ -557,6 +563,7 @@ export default function ScenarioPanel({
                         <Tooltip text="Lock converts oSAIL to veSAIL at 1:1 SAIL value (2x effective). Redeem converts to USDC at 50% spot price." />
                     </span>
                 </div>
+                {console.log('===== BUILD 2024-0113-1457 ===== osailStrategy:', scenario.osailStrategy)}
                 <input
                     type="range"
                     min="0"
@@ -569,6 +576,17 @@ export default function ScenarioPanel({
                     <span className={scenario.osailStrategy < 50 ? 'active' : ''}>Redeem {100 - scenario.osailStrategy}%</span>
                     <span className={scenario.osailStrategy >= 50 ? 'active' : ''}>Lock {scenario.osailStrategy}%</span>
                 </div>
+                {scenario.osailStrategy < 100 && (
+                    <div style={{
+                        marginTop: 'var(--space-xs)',
+                        fontSize: '0.7rem',
+                        color: 'var(--color-primary)',
+                        opacity: 0.85,
+                        textAlign: 'center'
+                    }}>
+                        💡 Increase lock % to earn 2x on locked oSAIL → veSAIL
+                    </div>
+                )}
             </div>
 
             {/* Results */}

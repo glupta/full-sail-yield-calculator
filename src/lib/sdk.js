@@ -269,6 +269,18 @@ export async function calculateEstimatedAPRFromSDK({
             return 0;
         }
 
+        console.log('[SDK Input Check]', {
+            poolName: pool.name,
+            tokenAPrice: pool.token_a?.current_price,
+            tokenBPrice: pool.token_b?.current_price,
+            tokenADecimals: pool.token_a?.decimals,
+            tokenBDecimals: pool.token_b?.decimals,
+            currentSqrtPrice: pool.current_sqrt_price,
+            priceLow,
+            priceHigh,
+            depositAmount
+        });
+
         // Auto-fetch SAIL coin if not provided
         const effectiveSailCoin = sailCoin || await fetchSailCoin();
 
@@ -299,6 +311,23 @@ export async function calculateEstimatedAPRFromSDK({
         // Check if current price is within range
         const currentTick = TickMath.sqrtPriceX64ToTickIndex(currentSqrtPrice);
         const inRange = currentTick >= lowerTick && currentTick <= upperTick;
+
+        console.log('[APR Debug - Full]', {
+            poolName: pool.name,
+            inputPriceLow: priceLow,
+            inputPriceHigh: priceHigh,
+            isToken0Stable,
+            effectivePriceLow,
+            effectivePriceHigh,
+            decimalsA,
+            decimalsB,
+            tickSpacing,
+            lowerTick,
+            upperTick,
+            currentTick,
+            inRange,
+            currentSqrtPrice: currentSqrtPrice.toString(),
+        });
 
         if (!inRange) {
             console.log('[APR Debug] Position out of range, returning 0');

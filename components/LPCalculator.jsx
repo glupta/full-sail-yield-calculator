@@ -20,7 +20,7 @@ const createDefaultScenario = () => ({
     priceRangeHigh: null,
     exitPrice: null,
     timeline: 30,
-    osailStrategy: 50,
+    osailStrategy: 0,
     aprOverride: null, // null = use SDK-calculated APR, number = user override
 });
 

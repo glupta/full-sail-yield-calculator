@@ -3,7 +3,7 @@
  * This runs in Node.js (API routes) where SDK works correctly
  */
 
-import { initFullSailSDK, PositionUtils } from '@fullsailfinance/sdk';
+import { initFullSailSDK, PositionUtils, ClmmPoolUtil, TickMath, Decimal } from '@fullsailfinance/sdk';
 
 let sdkInstance: ReturnType<typeof initFullSailSDK> | null = null;
 
@@ -120,18 +120,15 @@ export async function fetchPoolById(poolId: string) {
  */
 export async function fetchSailPrice(): Promise<number> {
     try {
-        const SAIL_USDC_POOL = '0x5a5c13667690746ede9b697a51f5c7970e3d2b2eeaf25e0056ebe244fc52e029';
-        const pool = await fetchPoolById(SAIL_USDC_POOL);
-        if (pool?.token_a?.current_price) {
-            return pool.token_a.current_price;
-        }
-        // Fallback: try to get from pool list
-        const pools = await fetchGaugePools();
-        const sailPool = pools.find((p: any) => p.name === 'SAIL/USDC');
+        const result = await getSDK().Pool.getList({
+            pagination: { page: 0, page_size: 100 },
+        });
+        const sailPool = (result.pools || []).find((p: any) => p.name === 'SAIL/USDC');
+        // In SAIL/USDC, SAIL is token_b
         if (sailPool?.token_b?.current_price) {
             return sailPool.token_b.current_price;
         }
-        return 0.0026; // Known fallback price
+        return 0.0026; // Fallback
     } catch (error) {
         console.error('Error fetching SAIL price:', error);
         return 0.0026; // Fallback
@@ -139,7 +136,8 @@ export async function fetchSailPrice(): Promise<number> {
 }
 
 /**
- * Estimate APR for a position using SDK's native method
+ * Estimate APR for a position using SDK's native methods
+ * This matches the working Node.js test approach exactly
  */
 export async function estimateAPR({
     pool,
@@ -156,125 +154,95 @@ export async function estimateAPR({
     rewardChoice?: 'liquid' | 'vesail';
     sailPrice: number;
 }) {
-    // Get current price from sqrt_price (SDK's native format)
-    const token0 = pool.token_a;
-    const token1 = pool.token_b;
-    const decimalsA = token0?.decimals ?? 9;
-    const decimalsB = token1?.decimals ?? 6;
-
-    const sqrtPrice = BigInt(pool.current_sqrt_price || 0);
-    const rawPrice = Number(sqrtPrice * sqrtPrice) / (2 ** 128);
-    const sdkPrice = rawPrice * Math.pow(10, decimalsA - decimalsB);
-
-    // Validate price
-    if (!sdkPrice || sdkPrice <= 0 || !isFinite(sdkPrice)) {
-        console.warn('[APR] Invalid SDK price:', sdkPrice, 'for pool:', pool.name);
-        return { apr: 0, outOfRange: false, error: 'Invalid price data' };
-    }
-
-    // Check if token_a is a stable coin - if so, prices need to be inverted
-    // UI shows price as "BTC in USDC" (e.g., 91000), but SDK has it as "USDC in BTC" (e.g., 0.0000109)
-    const token0Symbol = pool.token_a?.address?.split('::').pop()?.toUpperCase() || '';
-    const isTokenAStable = token0Symbol === 'USDC' || token0Symbol === 'USDT';
-
-    // Use SDK's native price for calculations
-    let currentPrice = sdkPrice;
-    let effectivePriceLow: number;
-    let effectivePriceHigh: number;
-
-    if (isTokenAStable) {
-        // Convert user's price range to SDK format: invert and swap low/high
-        // User thinks in "91000 BTC/USDC", SDK thinks in "0.0000109 USDC/BTC"
-        effectivePriceLow = 1 / priceHigh;
-        effectivePriceHigh = 1 / priceLow;
-    } else {
-        effectivePriceLow = priceLow;
-        effectivePriceHigh = priceHigh;
-    }
-
-    // Validate price range
-    if (effectivePriceLow <= 0 || effectivePriceHigh <= 0 || effectivePriceLow >= effectivePriceHigh) {
-        console.warn('[APR] Invalid price range:', { effectivePriceLow, effectivePriceHigh, priceLow, priceHigh, isTokenAStable });
-        return { apr: 0, outOfRange: false, error: 'Invalid price range' };
-    }
-
-    // Skip if current price is outside range
-    if (currentPrice < effectivePriceLow || currentPrice > effectivePriceHigh) {
-        console.log('[APR] Out of range:', currentPrice, 'not in', effectivePriceLow, '-', effectivePriceHigh);
-        return { apr: 0, outOfRange: true };
-    }
-
-    // Calculate liquidity using CLMM formula
-    const sqrtPriceLow = Math.sqrt(effectivePriceLow);
-    const sqrtPriceHigh = Math.sqrt(effectivePriceHigh);
-    const sqrtPriceCurrent = Math.sqrt(currentPrice);
-
-    // Validate sqrt calculations
-    if (sqrtPriceHigh - sqrtPriceCurrent <= 0 || sqrtPriceCurrent - sqrtPriceLow <= 0) {
-        console.warn('[APR] Price too close to bounds, edge case');
-        return { apr: 0, outOfRange: true, error: 'Price at range boundary' };
-    }
-
-    // Calculate token amounts based on token ordering
-    let amountInToken0: number;
-    let amountInToken1: number;
-
-    if (isTokenAStable) {
-        // For stable token_a (e.g., USDC/WBTC where USDC is token_a):
-        // - token_a (USDC) gets half the deposit directly
-        // - token_b (BTC) gets half the deposit divided by USD price
-        const usdPrice = 1 / currentPrice;  // Convert SDK price to USD-per-token
-        amountInToken0 = depositAmount / 2;  // USDC amount in raw units
-        amountInToken1 = (depositAmount / 2) / usdPrice;  // BTC amount = USD / (USD per BTC)
-    } else {
-        // Normal ordering (e.g., SAIL/USDC where SAIL is token_a)
-        amountInToken0 = (depositAmount / 2) / currentPrice;
-        amountInToken1 = depositAmount / 2;
-    }
-
-    const liquidityFromToken0 = amountInToken0 * sqrtPriceCurrent * sqrtPriceHigh / (sqrtPriceHigh - sqrtPriceCurrent);
-    const liquidityFromToken1 = amountInToken1 / (sqrtPriceCurrent - sqrtPriceLow);
-
-    // Take the min liquidity, but ensure it's positive
-    const liquidity = Math.min(Math.abs(liquidityFromToken0), Math.abs(liquidityFromToken1));
-
-    if (liquidity <= 0 || !isFinite(liquidity)) {
-        console.warn('[APR] Invalid liquidity calculation:', { liquidityFromToken0, liquidityFromToken1, liquidity });
-        return { apr: 0, outOfRange: false, error: 'Liquidity calculation failed' };
-    }
-
-    const liquidityBigInt = BigInt(Math.floor(liquidity * 1e9));
-
-    // Calculate token amounts for position
-    const amountA = BigInt(Math.floor(Math.abs(amountInToken0) * Math.pow(10, decimalsA)));
-    const amountB = BigInt(Math.floor(Math.abs(amountInToken1) * Math.pow(10, decimalsB)));
-
-    console.log('[APR Debug]', pool.name, {
-        sdkPrice,
-        isTokenAStable,
-        effectivePriceLow,
-        effectivePriceHigh,
-        liquidity: liquidity.toExponential(3),
-        amountA: amountA.toString(),
-        amountB: amountB.toString(),
-    });
-
     try {
+        if (!pool || !priceLow || !priceHigh || !depositAmount) {
+            return { apr: 0, outOfRange: false, error: 'Missing parameters' };
+        }
+
+        const decimalsA = pool.token_a?.decimals ?? 9;
+        const decimalsB = pool.token_b?.decimals ?? 9;
+        const tickSpacing = pool.tick_spacing || 60;
+
+        const currentSqrtPrice = BigInt(pool.current_sqrt_price || 0);
+        if (currentSqrtPrice === 0n) {
+            return { apr: 0, outOfRange: false, error: 'Invalid sqrt price' };
+        }
+
+        // Determine if token A is the stable (quote) token
+        const token0Symbol = pool.token_a?.address?.split('::').pop() || '';
+        const isToken0Stable = token0Symbol === 'USDC' || token0Symbol === 'USDT';
+
+        // For stablecoin-quote pools, invert prices before tick conversion
+        const effectivePriceLow = isToken0Stable ? (1 / priceHigh) : priceLow;
+        const effectivePriceHigh = isToken0Stable ? (1 / priceLow) : priceHigh;
+
+        // Convert prices to ticks using SDK methods
+        const lowerTick = TickMath.priceToInitializableTickIndex(
+            Decimal(effectivePriceLow), decimalsA, decimalsB, tickSpacing
+        );
+        const upperTick = TickMath.priceToInitializableTickIndex(
+            Decimal(effectivePriceHigh), decimalsA, decimalsB, tickSpacing
+        );
+
+        // Check if current price is within range
+        const currentTick = TickMath.sqrtPriceX64ToTickIndex(currentSqrtPrice);
+        const inRange = currentTick >= lowerTick && currentTick <= upperTick;
+
+        console.log('[APR Debug]', pool.name, {
+            priceLow,
+            priceHigh,
+            isToken0Stable,
+            effectivePriceLow,
+            effectivePriceHigh,
+            lowerTick,
+            upperTick,
+            currentTick,
+            inRange,
+        });
+
+        if (!inRange) {
+            return { apr: 0, outOfRange: true };
+        }
+
+        // Estimate token A amount from USD deposit (half goes to each token)
+        const tokenAPrice = pool.token_a?.current_price || 1;
+        const coinAmountA = BigInt(Math.floor((depositAmount / 2 / tokenAPrice) * Math.pow(10, decimalsA)));
+
+        // Estimate liquidity using SDK's native method
+        const { amountA, amountB, liquidityAmount } = ClmmPoolUtil.estLiquidityAndCoinAmountFromOneAmounts(
+            lowerTick,
+            upperTick,
+            coinAmountA,
+            true, // isCoinA
+            false, // roundUp
+            0, // slippage
+            currentSqrtPrice
+        );
+
+        console.log('[APR Liquidity]', pool.name, {
+            tokenAPrice,
+            coinAmountA: coinAmountA.toString(),
+            liquidityAmount: liquidityAmount.toString(),
+            amountA: amountA.toString(),
+            amountB: amountB.toString(),
+        });
+
+        // Use SDK's native estimateAprByLiquidity
         const estimatedApr = PositionUtils.estimateAprByLiquidity({
             pool,
-            positionActiveLiquidity: liquidityBigInt,
+            positionActiveLiquidity: liquidityAmount,
             positionAmountA: amountA,
             positionAmountB: amountB,
             sailPrice: sailPrice,
-            oSailDecimals: 9,
+            oSailDecimals: 6,
             rewardChoice: rewardChoice as any,
             isNewPosition: true,
         });
 
-        console.log('[APR Result]', pool.name, estimatedApr);
+        console.log('[APR Result]', pool.name, estimatedApr, '%');
         return { apr: estimatedApr, outOfRange: false };
     } catch (error) {
-        console.error('[APR Error]', pool.name, error);
+        console.error('[APR Error]', pool?.name, error);
         return { apr: 0, outOfRange: false, error: String(error) };
     }
 }
