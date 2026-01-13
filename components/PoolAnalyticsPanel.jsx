@@ -52,7 +52,7 @@ export default function PoolAnalyticsPanel({ pool }) {
                 <h4>Pool Metrics</h4>
             </div>
 
-            {/* Top Row: TVL, Volume, Fees */}
+            {/* Top Row: TVL, Volume, Fees, Fee Tier */}
             <div className="analytics-metrics-grid" style={{ marginBottom: 'var(--space-sm)' }}>
                 <MetricCard
                     icon={<DollarSign size={14} />}
@@ -69,6 +69,11 @@ export default function PoolAnalyticsPanel({ pool }) {
                     icon={<Coins size={14} />}
                     label="24h Fees"
                     value={analytics.fees24hFormatted}
+                />
+                <MetricCard
+                    icon={<Percent size={14} />}
+                    label="Fee Tier"
+                    value={analytics.feeTierFormatted}
                 />
             </div>
 
