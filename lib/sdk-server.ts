@@ -180,7 +180,7 @@ export async function estimateAPR({
             positionAmountB: amountB,
             sailPrice: sailCoin.current_price,
             oSailDecimals: sailCoin.decimals,
-            rewardChoice,
+            rewardChoice: rewardChoice as any,
             isNewPosition: true,
         });
 
