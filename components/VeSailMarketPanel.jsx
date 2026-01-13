@@ -284,11 +284,41 @@ export default function VeSailMarketPanel() {
                             paddingBottom: 'var(--space-xs)',
                             borderBottom: '1px solid var(--border-subtle)'
                         }}>
-                            <span style={{ minWidth: '55px' }}>Date</span>
-                            <span style={{ minWidth: '55px', textAlign: 'right' }}>Price</span>
-                            <span style={{ minWidth: '45px', textAlign: 'right' }}>SAIL</span>
-                            <span style={{ minWidth: '40px', textAlign: 'right' }}>vs Spot</span>
-                            <span style={{ minWidth: '45px', textAlign: 'right' }}>Lock</span>
+                            <span style={{ minWidth: '55px' }}>
+                                Date
+                                <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                    <HelpCircle size={8} className="tooltip-icon" />
+                                    <span className="tooltip-text">Date this veSAIL NFT was sold</span>
+                                </span>
+                            </span>
+                            <span style={{ minWidth: '55px', textAlign: 'right' }}>
+                                Price
+                                <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                    <HelpCircle size={8} className="tooltip-icon" />
+                                    <span className="tooltip-text">Sale price in SUI</span>
+                                </span>
+                            </span>
+                            <span style={{ minWidth: '45px', textAlign: 'right' }}>
+                                SAIL
+                                <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                    <HelpCircle size={8} className="tooltip-icon" />
+                                    <span className="tooltip-text">Amount of SAIL locked in the sold position</span>
+                                </span>
+                            </span>
+                            <span style={{ minWidth: '40px', textAlign: 'right' }}>
+                                vs Spot
+                                <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                    <HelpCircle size={8} className="tooltip-icon" />
+                                    <span className="tooltip-text">Discount (-) or premium (+) vs SAIL spot at time of sale</span>
+                                </span>
+                            </span>
+                            <span style={{ minWidth: '45px', textAlign: 'right' }}>
+                                Lock
+                                <span className="tooltip-wrapper" style={{ marginLeft: '2px' }}>
+                                    <HelpCircle size={8} className="tooltip-icon" />
+                                    <span className="tooltip-text">PERM = permanent lock, or remaining lock duration</span>
+                                </span>
+                            </span>
                         </div>
                         <div style={{ fontSize: '0.8rem' }}>
                             {recentSales.slice(0, 5).map((sale, i) => (
