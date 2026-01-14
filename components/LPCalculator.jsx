@@ -6,7 +6,7 @@ import { fetchPools } from '@/lib/api-client';
 import { calculateTotalResults } from '@/lib/scenario-calculator';
 import { roundToSigFigs } from '@/lib/formatters';
 import { getDefaultPreset, getPriceRangeFromPercent } from '@/lib/calculators/leverage-calculator';
-import { Plus, HelpCircle } from 'lucide-react';
+import { Plus, HelpCircle, TrendingUp, RefreshCw } from 'lucide-react';
 
 // Tooltip helper component
 const Tooltip = ({ text }) => (
@@ -69,43 +69,53 @@ function ScenarioSkeleton() {
 export default function LPCalculator() {
     const [pools, setPools] = useState([]);
     const [poolsLoading, setPoolsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [scenarios, setScenarios] = useState([createDefaultScenario()]);
     const isInitialized = useRef(false);
     const poolsRef = useRef([]);
 
-    // Load pools and restore state on mount
-    useEffect(() => {
-        async function initializeCalculator() {
+    // Fetch pool data - reusable for refresh
+    const fetchPoolData = async (isRefresh = false) => {
+        if (isRefresh) {
+            setRefreshing(true);
+        } else {
             setPoolsLoading(true);
+        }
 
-            const fetchedPools = await fetchPools();
-            setPools(fetchedPools);
-            poolsRef.current = fetchedPools;
+        const fetchedPools = await fetchPools();
+        setPools(fetchedPools);
+        poolsRef.current = fetchedPools;
 
-            // Default to SAIL/USDC pool, fallback to first pool
-            if (fetchedPools.length > 0) {
-                const sailPool = fetchedPools.find(p =>
-                    (p.token0_symbol?.toUpperCase() === 'SAIL' || p.token1_symbol?.toUpperCase() === 'SAIL') &&
-                    (p.token0_symbol?.toUpperCase() === 'USDC' || p.token1_symbol?.toUpperCase() === 'USDC')
-                );
-                const pool = sailPool || fetchedPools[0];
-                const defaultPreset = getDefaultPreset();
-                const range = pool?.currentPrice
-                    ? getPriceRangeFromPercent(pool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct)
-                    : { priceLow: null, priceHigh: null };
-                setScenarios([{
-                    ...createDefaultScenario(),
-                    pool,
-                    priceRangeLow: range.priceLow ? roundToSigFigs(range.priceLow, 4) : null,
-                    priceRangeHigh: range.priceHigh ? roundToSigFigs(range.priceHigh, 4) : null,
-                }]);
-            }
+        // Only set default pool on initial load
+        if (!isRefresh && fetchedPools.length > 0) {
+            const sailPool = fetchedPools.find(p =>
+                (p.token0_symbol?.toUpperCase() === 'SAIL' || p.token1_symbol?.toUpperCase() === 'SAIL') &&
+                (p.token0_symbol?.toUpperCase() === 'USDC' || p.token1_symbol?.toUpperCase() === 'USDC')
+            );
+            const pool = sailPool || fetchedPools[0];
+            const defaultPreset = getDefaultPreset();
+            const range = pool?.currentPrice
+                ? getPriceRangeFromPercent(pool.currentPrice, defaultPreset.lowerPct, defaultPreset.upperPct)
+                : { priceLow: null, priceHigh: null };
+            setScenarios([{
+                ...createDefaultScenario(),
+                pool,
+                priceRangeLow: range.priceLow ? roundToSigFigs(range.priceLow, 4) : null,
+                priceRangeHigh: range.priceHigh ? roundToSigFigs(range.priceHigh, 4) : null,
+            }]);
+        }
 
+        if (isRefresh) {
+            setRefreshing(false);
+        } else {
             setPoolsLoading(false);
             isInitialized.current = true;
         }
+    };
 
-        initializeCalculator();
+    // Load pools on mount
+    useEffect(() => {
+        fetchPoolData(false);
     }, []);
 
 
@@ -176,18 +186,28 @@ export default function LPCalculator() {
             {/* Portfolio Summary */}
             {totals.scenarioCount > 0 && (
                 <div className="summary-card mb-lg animate-in">
-                    <h4
-                        className="mb-md"
-                        style={{
-                            color: 'var(--color-primary)',
-                            fontSize: '0.8rem',
-                            letterSpacing: '1.5px',
-                            textTransform: 'uppercase',
-                            fontWeight: 600
-                        }}
-                    >
-                        Summary
-                    </h4>
+                    {/* Header with LIVE indicator - matching other pages */}
+                    <div className="flex justify-between items-center mb-md">
+                        <h3 className="flex items-center gap-sm" style={{ fontSize: '1.25rem', margin: 0 }}>
+                            <TrendingUp size={20} style={{ color: 'var(--color-primary)' }} />
+                            LP Position Summary
+                        </h3>
+                        <span style={{
+                            fontSize: '0.65rem',
+                            color: 'var(--color-success)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}>
+                            <span style={{
+                                width: '6px',
+                                height: '6px',
+                                background: 'var(--color-success)',
+                                borderRadius: '50%',
+                            }}></span>
+                            LIVE
+                        </span>
+                    </div>
 
                     {/* Stats Row - Crisp Grid Layout */}
                     <div className="summary-stats-grid">
