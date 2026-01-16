@@ -148,7 +148,21 @@ export async function GET() {
             if (!tokenId) continue;
 
             const fields = onChainMap.get(tokenId);
-            if (!fields) continue;
+
+            // Store trade even if on-chain data unavailable (NFT burned/merged)
+            if (!fields) {
+                tradeRecords.push({
+                    id: trade.id,
+                    tx_hash: null,
+                    block_time: trade.block_time,
+                    price_mist: trade.price,
+                    token_id: tokenId,
+                    locked_sail: -1, // Flag: data unavailable
+                    lock_type: 'UNAVAILABLE',
+                    lock_end_ts: null,
+                });
+                continue;
+            }
 
             const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
 
@@ -158,7 +172,7 @@ export async function GET() {
 
             tradeRecords.push({
                 id: trade.id,
-                tx_hash: null, // Could be extracted from Tradeport if available
+                tx_hash: null,
                 block_time: trade.block_time,
                 price_mist: trade.price,
                 token_id: tokenId,
