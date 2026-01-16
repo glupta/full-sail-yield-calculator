@@ -97,6 +97,13 @@ The calculator uses the `@fullsailfinance/sdk` to fetch real-time pool data, pos
 #### 3.3 Data Source
 - SDK `Lock` module for lock details.
 - ✅ Tradeport API for floor prices and sales data (implemented via `/api/vesail`)
+- ✅ Supabase persistence for historical trade snapshots
+
+#### 3.4 Trade Persistence (NEW)
+veSAIL trades are persisted to Supabase to capture on-chain state at time of sale:
+- **Indexer endpoint**: `/api/vesail/index` - fetches new trades from Tradeport, snapshots on-chain data, persists to DB
+- **UNAVAILABLE trades**: If on-chain data (locked SAIL) is withdrawn before indexing, trade is stored with `lockType: UNAVAILABLE` and displayed with N/A badge
+- **RLS Security**: Tables protected with Row Level Security, accessible only via `service_role`
 
 ---
 
@@ -173,6 +180,7 @@ User Input → SDK Fetch → Calculation Engine → Projected Yields → UI Rend
 | LP Calculator (1.x) | ✅ Complete | Full SDK integration, scenario comparison |
 | Token Buyer Calculator (2.x) | ✅ Complete | Voting projections, veSAIL valuation |
 | veSAIL Secondary Market (3.x) | ✅ Complete | Tradeport API, scatter plot, DCF |
+| veSAIL Trade Persistence | ✅ Complete | Supabase DB, trade indexer, UNAVAILABLE handling |
 | SAIL Investor Dashboard | ✅ Complete | Added beyond spec - live metrics terminal |
 | Multi-position aggregation | ❌ Not implemented | Requires wallet integration |
 | Scenario Comparison | ✅ Complete | Up to 3 side-by-side |
@@ -200,6 +208,7 @@ User Input → SDK Fetch → Calculation Engine → Projected Yields → UI Rend
 | Locks | Backend | `sdk.Lock.getByOwner()` |
 | Historical prices | On-chain / Indexer | Not implemented |
 | veSAIL floor price | Tradeport API | ✅ `/api/vesail` route |
+| veSAIL trade history | Supabase | ✅ `/api/vesail` reads from `vesail_trades` table |
 | SAIL metrics | Full Sail Backend | ✅ `/api/sail-metrics` route |
 | SAIL holder data | BlockVision API | ✅ `/api/sail-holders` route |
 
