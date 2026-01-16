@@ -134,8 +134,18 @@ export default function VeSailMarketPanel() {
                             : `${((stats.veSailPriceInSail - 1) * 100).toFixed(0)}% premium`}
                         icon={null}
                         positive={stats.veSailPriceInSail < 1}
+                        tooltip="Weighted average veSAIL price based on recent trades"
+                    />
+                    <StatCard
+                        label="Best Available"
+                        value={stats.bestListingDiscountPct != null
+                            ? `${stats.bestListingDiscountPct > 0 ? '-' : '+'}${Math.abs(stats.bestListingDiscountPct).toFixed(0)}%`
+                            : 'N/A'}
+                        sublabel={stats.bestListingPriceSui ? `${stats.bestListingPriceSui.toFixed(1)} SUI` : 'No listings'}
+                        icon={<ShoppingCart size={18} />}
+                        positive={stats.bestListingDiscountPct > 0}
                         highlight={true}
-                        tooltip="Weighted average veSAIL price in USD based on recent trades"
+                        tooltip="Best current listing: lowest price per SAIL locked. Click listings below to buy."
                     />
                     <StatCard
                         label="Best Trade"
@@ -143,7 +153,7 @@ export default function VeSailMarketPanel() {
                         sublabel={stats.bestDiscountPct > 0 ? 'discount' : 'premium'}
                         icon={stats.bestDiscountPct > 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
                         positive={stats.bestDiscountPct > 0}
-                        tooltip="Best discount or premium seen vs SAIL spot price"
+                        tooltip="Best historical discount or premium seen vs SAIL spot price"
                     />
                     <StatCard
                         label="Total Sales"

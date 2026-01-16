@@ -192,21 +192,58 @@ export default function LPCalculator() {
                             <TrendingUp size={20} style={{ color: 'var(--color-primary)' }} />
                             LP Position Summary
                         </h3>
-                        <span style={{
-                            fontSize: '0.65rem',
-                            color: 'var(--color-success)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}>
+                        <div className="flex items-center gap-sm">
                             <span style={{
-                                width: '6px',
-                                height: '6px',
-                                background: 'var(--color-success)',
-                                borderRadius: '50%',
-                            }}></span>
-                            LIVE
-                        </span>
+                                fontSize: '0.65rem',
+                                color: 'var(--color-success)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                            }}>
+                                <span style={{
+                                    width: '6px',
+                                    height: '6px',
+                                    background: 'var(--color-success)',
+                                    borderRadius: '50%',
+                                }}></span>
+                                LIVE
+                            </span>
+                            <button
+                                onClick={() => fetchPoolData(true)}
+                                disabled={refreshing}
+                                title="Refresh pool data"
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid var(--border-subtle)',
+                                    borderRadius: 'var(--radius-md)',
+                                    padding: '6px',
+                                    cursor: refreshing ? 'wait' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s ease',
+                                    opacity: refreshing ? 0.6 : 1,
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!refreshing) {
+                                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                        e.currentTarget.style.background = 'rgba(0, 160, 255, 0.1)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                                    e.currentTarget.style.background = 'transparent';
+                                }}
+                            >
+                                <RefreshCw
+                                    size={14}
+                                    style={{
+                                        color: 'var(--text-muted)',
+                                        animation: refreshing ? 'spin 1s linear infinite' : 'none'
+                                    }}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Stats Row - Crisp Grid Layout */}

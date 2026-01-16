@@ -8,6 +8,8 @@ stateDiagram-v2
     
     Landing --> LP_Calculator: Select "LP Yields"
     Landing --> TokenBuyer_Calculator: Select "Token Buyer"
+    Landing --> SAIL_Dashboard: Select "SAIL"
+    Landing --> VeSail_Dashboard: Select "veSAIL"
     
     state LP_Calculator {
         [*] --> LP_Input
@@ -30,8 +32,26 @@ stateDiagram-v2
         TB_Results --> TB_LockConfig: Adjust parameters
     }
     
+    state SAIL_Dashboard {
+        [*] --> SAIL_Loading
+        SAIL_Loading --> SAIL_Metrics: Fetch /api/sail-metrics
+        SAIL_Metrics --> SAIL_Holders: Expand holders
+        SAIL_Holders --> SAIL_Metrics: Collapse
+    }
+    
+    state VeSail_Dashboard {
+        [*] --> VeSail_Loading
+        VeSail_Loading --> VeSail_Market: Fetch /api/vesail
+        VeSail_Market --> VeSail_Listings: View listings
+        VeSail_Market --> VeSail_Sales: View sales
+    }
+    
     LP_Calculator --> TokenBuyer_Calculator: Toggle persona
     TokenBuyer_Calculator --> LP_Calculator: Toggle persona
+    LP_Calculator --> SAIL_Dashboard: Toggle persona
+    SAIL_Dashboard --> LP_Calculator: Toggle persona
+    LP_Calculator --> VeSail_Dashboard: Toggle persona
+    VeSail_Dashboard --> LP_Calculator: Toggle persona
 ```
 
 ---

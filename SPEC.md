@@ -95,8 +95,8 @@ The calculator uses the `@fullsailfinance/sdk` to fetch real-time pool data, pos
 | Discount Rate | `number` | User-configurable (default TBD) |
 
 #### 3.3 Data Source
-- SDK `Lock` module for lock details
-- Tradeport API for floor prices (future integration)
+- SDK `Lock` module for lock details.
+- ✅ Tradeport API for floor prices and sales data (implemented via `/api/vesail`)
 
 ---
 
@@ -166,10 +166,22 @@ User Input → SDK Fetch → Calculation Engine → Projected Yields → UI Rend
 
 ---
 
+## Implementation Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| LP Calculator (1.x) | ✅ Complete | Full SDK integration, scenario comparison |
+| Token Buyer Calculator (2.x) | ✅ Complete | Voting projections, veSAIL valuation |
+| veSAIL Secondary Market (3.x) | ✅ Complete | Tradeport API, scatter plot, DCF |
+| SAIL Investor Dashboard | ✅ Complete | Added beyond spec - live metrics terminal |
+| Multi-position aggregation | ❌ Not implemented | Requires wallet integration |
+| Scenario Comparison | ✅ Complete | Up to 3 side-by-side |
+
+---
+
 ## Non-Goals (V1)
 
 - ❌ Gas cost modeling
-- ❌ Time-value/discount rate for oSAIL lock vs. redeem
 - ❌ Per-pool voting allocation
 - ❌ Prediction accuracy bonuses
 - ❌ Active rebalancing strategies
@@ -186,8 +198,10 @@ User Input → SDK Fetch → Calculation Engine → Projected Yields → UI Rend
 | Current price | On-chain | `sdk.Pool.getByIdFromChain()` |
 | Positions | Backend | `sdk.Position.getByOwner()` |
 | Locks | Backend | `sdk.Lock.getByOwner()` |
-| Historical prices | On-chain / Indexer | TBD |
-| veSAIL floor price | Tradeport API | Future integration |
+| Historical prices | On-chain / Indexer | Not implemented |
+| veSAIL floor price | Tradeport API | ✅ `/api/vesail` route |
+| SAIL metrics | Full Sail Backend | ✅ `/api/sail-metrics` route |
+| SAIL holder data | BlockVision API | ✅ `/api/sail-holders` route |
 
 ---
 
@@ -199,8 +213,12 @@ User Input → SDK Fetch → Calculation Engine → Projected Yields → UI Rend
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. What discount rate to use for DCF valuation of veSAIL?
-2. Tradeport API access for veSAIL floor prices?
-3. Historical price data source for volatility derivation?
+1. ~~What discount rate to use for DCF valuation?~~ → User-configurable in Token Buyer Calculator
+2. ~~Tradeport API access?~~ → ✅ Implemented via API route
+3. Historical price data source? → **Still open** (using current price only)
+
+## Remaining Open Questions
+
+1. Historical price data source for volatility derivation?

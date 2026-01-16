@@ -159,3 +159,37 @@ export async function fetchSailMetrics(): Promise<SailInvestorMetrics> {
     }
     return res.json();
 }
+
+export interface SailHolder {
+    address: string;
+    shortAddress: string;
+    amount: number;
+    percentage: string;
+    percentageRaw: number;
+}
+
+export interface SailHoldersResponse {
+    holders: SailHolder[];
+    total: number;
+    coinType: string;
+    hasMore: boolean;
+    nextCursor?: string;
+    error?: string;
+}
+
+/**
+ * Fetch SAIL token holders from on-chain via BlockVision
+ */
+export async function fetchSailHolders(
+    limit: number = 20,
+    cursor?: string
+): Promise<SailHoldersResponse> {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (cursor) params.append('cursor', cursor);
+
+    const res = await fetch(`/api/sail-holders?${params.toString()}`);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch SAIL holders: ${res.status}`);
+    }
+    return res.json();
+}

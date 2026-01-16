@@ -5,7 +5,7 @@
  * Live metrics from Full Sail protocol APIs
  */
 import { useState, useEffect } from 'react';
-import { fetchSailMetrics, SailInvestorMetrics } from '@/lib/api-client';
+import { fetchSailMetrics, SailInvestorMetrics, fetchSailHolders, SailHolder, SailHoldersResponse } from '@/lib/api-client';
 import {
     TrendingUp,
     Lock,
@@ -16,6 +16,8 @@ import {
     BarChart3,
     Zap,
     Info,
+    Users,
+    ExternalLink,
 } from 'lucide-react';
 
 // Format helpers
@@ -141,15 +143,26 @@ function MetricRow({ label, value, valueColor, tooltip }: {
 
 export default function SailInvestorDashboard() {
     const [metrics, setMetrics] = useState<SailInvestorMetrics | null>(null);
+    const [holders, setHolders] = useState<SailHolder[]>([]);
+    const [holdersError, setHoldersError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
+        setHoldersError(null);
         try {
-            const data = await fetchSailMetrics();
-            setMetrics(data);
+            const [metricsData, holdersData] = await Promise.all([
+                fetchSailMetrics(),
+                fetchSailHolders(10).catch(e => ({ holders: [], error: e.message }))
+            ]);
+            setMetrics(metricsData);
+            if ('error' in holdersData && holdersData.error) {
+                setHoldersError(holdersData.error);
+            } else {
+                setHolders(holdersData.holders);
+            }
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -330,6 +343,102 @@ export default function SailInvestorDashboard() {
                         value={metrics.feeEmissionRatio.toFixed(2) + 'x'}
                         tooltip="Ratio of weekly fees distributed to weekly emission value"
                     />
+                </div>
+
+                {/* Top SAIL Holders */}
+                <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+                    <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem' }}>
+                        <Users size={18} style={{ color: 'var(--color-primary)' }} />
+                        Top SAIL Holders
+                    </h3>
+                    {/* Column Headers */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.65rem',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        paddingBottom: 'var(--space-xs)',
+                        borderBottom: '1px solid var(--border-subtle)'
+                    }}>
+                        <span style={{ minWidth: '30px' }}>
+                            <Tooltip text="Rank by SAIL holdings">#</Tooltip>
+                        </span>
+                        <span style={{ flex: 1, minWidth: '120px' }}>
+                            <Tooltip text="Wallet address on Sui network">Address</Tooltip>
+                        </span>
+                        <span style={{ minWidth: '100px', textAlign: 'right' }}>
+                            <Tooltip text="Amount of SAIL tokens held">Amount</Tooltip>
+                        </span>
+                        <span style={{ minWidth: '70px', textAlign: 'right' }}>
+                            <Tooltip text="Percentage of total SAIL supply">% Supply</Tooltip>
+                        </span>
+                    </div>
+                    {/* Holders rows */}
+                    <div style={{ fontSize: '0.8rem' }}>
+                        {holdersError ? (
+                            <div style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
+                                Unable to load holders
+                            </div>
+                        ) : holders.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: 'var(--space-lg)', color: 'var(--text-muted)' }}>
+                                No holder data available
+                            </div>
+                        ) : (
+                            holders.map((holder, i) => (
+                                <div
+                                    key={holder.address}
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        padding: 'var(--space-xs) 0',
+                                        borderBottom: i < holders.length - 1 ? '1px solid var(--border-subtle)' : 'none'
+                                    }}
+                                >
+                                    <span style={{ minWidth: '30px', color: 'var(--text-muted)' }}>
+                                        {i + 1}
+                                    </span>
+                                    <span style={{ flex: 1, minWidth: '120px' }}>
+                                        <a
+                                            href={`https://suiscan.xyz/mainnet/account/${holder.address}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                fontFamily: 'var(--font-mono)',
+                                                color: 'var(--color-primary)',
+                                                textDecoration: 'none',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            {holder.shortAddress}
+                                            <ExternalLink size={10} style={{ opacity: 0.6 }} />
+                                        </a>
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--font-mono)', minWidth: '100px', textAlign: 'right' }}>
+                                        {holder.amount >= 1e9
+                                            ? `${(holder.amount / 1e9).toFixed(2)}B`
+                                            : holder.amount >= 1e6
+                                                ? `${(holder.amount / 1e6).toFixed(2)}M`
+                                                : holder.amount >= 1e3
+                                                    ? `${(holder.amount / 1e3).toFixed(1)}K`
+                                                    : holder.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    </span>
+                                    <span style={{
+                                        fontFamily: 'var(--font-mono)',
+                                        minWidth: '70px',
+                                        textAlign: 'right',
+                                        color: holder.percentageRaw >= 1 ? 'var(--color-primary)' : 'var(--text-secondary)'
+                                    }}>
+                                        {holder.percentage}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

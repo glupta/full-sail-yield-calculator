@@ -80,8 +80,13 @@ Users currently lack tools to model these tradeoffs and project returns.
 
 ### F8: Data Persistence
 - **localStorage**: Save inputs on change
-- **Restore**: Pre-fill on return visit
+- **Restore**: Pre-fill on return visit (selective - core params reset on refresh)
 - **Clear**: Button to reset all inputs
+
+### F9: SAIL Investor Dashboard *(Added beyond spec)*
+- **Overview Mode**: Toggle between Calculator and Dashboard views
+- **Live Metrics**: Protocol-wide SAIL and veSAIL statistics
+- **Top Holders**: SAIL holder leaderboard via BlockVision API
 
 ---
 
@@ -152,21 +157,22 @@ Users currently lack tools to model these tradeoffs and project returns.
 
 ## Milestones
 
-| Phase | Deliverable | Timeline |
-|-------|-------------|----------|
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
 | P0 | Spec + State Diagram + PRD | ✅ Complete |
-| P1 | LP Calculator MVP | TBD |
-| P2 | Token Buyer Calculator | TBD |
-| P3 | veSAIL Valuation | TBD |
-| P4 | Multi-position + Comparison | TBD |
+| P1 | LP Calculator MVP | ✅ Complete |
+| P2 | Token Buyer Calculator | ✅ Complete |
+| P3 | veSAIL Valuation + Tradeport | ✅ Complete |
+| P4 | SAIL Investor Dashboard | ✅ Complete (added beyond spec) |
+| P5 | Multi-position Aggregation | ❌ Not started |
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. **Discount rate for DCF**: What's the default risk-free rate?
-2. **Historical price API**: On-chain indexer or third-party?
-3. **Tradeport integration**: API access for veSAIL floor prices?
+1. ~~Discount rate for DCF~~: User-configurable slider in Token Buyer Calculator
+2. ~~Historical price API~~: Using current price only (no historical data needed for MVP)
+3. ~~Tradeport integration~~: ✅ `/api/vesail` route with listings + sales data
 
 ---
 

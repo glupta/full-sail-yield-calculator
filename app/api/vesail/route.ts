@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchPersistedTrades, isSupabaseConfigured, VeSailTradeRow } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -103,86 +104,89 @@ export interface VeSailMarketData {
         totalVolumeSui: number;
         avgDiscountPct: number;
         weightedAvgDiscountPct: number;
-        veSailPriceInSail: number; // veSAIL price in SAIL terms
+        veSailPriceInSail: number; // veSAIL price in SAIL terms (weighted avg from trades)
         bestDiscountPct: number;
         sailSpotPriceSui: number;
+        // New: Best listing stats
+        bestListingPricePerSail: number | null;
+        bestListingDiscountPct: number | null;
+        bestListingPriceSui: number | null;
     };
     recentSales: VeSailSale[];
     listings: VeSailListing[];
     lastUpdated: string;
+    dataSource: 'database' | 'live' | 'fallback';
+}
+
+/**
+ * Convert persisted trade row to VeSailSale format
+ */
+function tradeRowToSale(row: VeSailTradeRow, sailSpotPrice: number): VeSailSale | null {
+    const priceSui = row.price_mist / MIST_PER_SUI;
+    const lockedSail = row.locked_sail;
+
+    // Skip trades with 0 SAIL (shouldn't happen with DB, but safety check)
+    if (lockedSail <= 0) return null;
+
+    const pricePerSail = priceSui / lockedSail;
+    const discountPct = ((sailSpotPrice - pricePerSail) / sailSpotPrice) * 100;
+
+    return {
+        date: row.block_time,
+        priceSui,
+        lockedSail,
+        pricePerSail,
+        discountPct,
+        lockType: row.lock_type,
+    };
 }
 
 export async function GET() {
     try {
         const sailSpotPrice = await fetchSailSpotPrice();
+        let dataSource: 'database' | 'live' | 'fallback' = 'live';
 
-        // Fetch trades and listings from Tradeport
-        const [tradesResult, listingsResult] = await Promise.all([
-            graphqlQuery<{ actions: Array<{ id: string; price: number; nft_id: string; block_time: string }> }>(
-                `{ sui { actions(where: { collection_id: { _eq: "${VESAIL_COLLECTION_ID}" }, type: { _eq: "buy" } }, limit: 100) { id price nft_id block_time } } }`
-            ),
-            graphqlQuery<{ listings: Array<{ id: string; price: number | null; nft_id: string }> }>(
-                `{ sui { listings(where: { collection_id: { _eq: "${VESAIL_COLLECTION_ID}" } }, limit: 100) { id price nft_id } } }`
-            ),
-        ]);
+        // Try to fetch persisted trades from database first
+        let recentSales: VeSailSale[] = [];
+        let totalVolumeSui = 0;
 
-        const trades = tradesResult.actions.sort((a, b) =>
-            new Date(b.block_time).getTime() - new Date(a.block_time).getTime()
+        if (isSupabaseConfigured()) {
+            const dbTrades = await fetchPersistedTrades(100);
+
+            if (dbTrades.length > 0) {
+                dataSource = 'database';
+
+                for (const row of dbTrades) {
+                    const sale = tradeRowToSale(row, sailSpotPrice);
+                    if (sale) {
+                        recentSales.push(sale);
+                        totalVolumeSui += sale.priceSui;
+                    }
+                }
+            }
+        }
+
+        // Fetch LIVE listings from Tradeport (always fresh - these change frequently)
+        const listingsResult = await graphqlQuery<{ listings: Array<{ id: string; price: number | null; nft_id: string }> }>(
+            `{ sui { listings(where: { collection_id: { _eq: "${VESAIL_COLLECTION_ID}" } }, limit: 100) { id price nft_id } } }`
         );
+
         const activeListings = listingsResult.listings.filter(l => l.price && l.price > 0);
 
-        // Get all NFT token IDs
-        const allNftIds = [...new Set([...trades.map(t => t.nft_id), ...activeListings.map(l => l.nft_id)])];
-        const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
-            `{ sui { nfts(where: { id: { _in: ${JSON.stringify(allNftIds)} } }) { id token_id } } }`
-        );
-        const nftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
+        // Get NFT token IDs for listings
+        const nftIds = [...new Set(activeListings.map(l => l.nft_id))];
+        let nftMap = new Map<string, string>();
 
-        // Batch fetch on-chain data
-        const allTokenIds = [...new Set(nftsResult.nfts.map(n => n.token_id))];
-        const onChainMap = await fetchObjects(allTokenIds);
-
-        // Process sales
-        const recentSales: VeSailSale[] = [];
-        let totalVolumeSui = 0;
-        let totalSailTraded = 0;
-        let bestDiscountPct = -Infinity;
-
-        for (const trade of trades) {
-            const tokenId = nftMap.get(trade.nft_id);
-            const priceSui = trade.price / MIST_PER_SUI;
-            totalVolumeSui += priceSui;
-
-            if (!tokenId) continue;
-            const fields = onChainMap.get(tokenId);
-            if (!fields) continue;
-
-            const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
-            if (lockedSail <= 0) continue;
-
-            const isPermanent = fields.permanent === true;
-            const endTimestamp = parseInt(fields.end || '0');
-            const pricePerSail = priceSui / lockedSail;
-            const discountPct = ((sailSpotPrice - pricePerSail) / sailSpotPrice) * 100;
-
-            let lockType: string = 'PERM';
-            if (!isPermanent && endTimestamp > 0) {
-                const yearsRemaining = (new Date(endTimestamp * 1000).getTime() - Date.now()) / (365 * 24 * 60 * 60 * 1000);
-                lockType = yearsRemaining > 0 ? `${yearsRemaining.toFixed(1)}yr` : 'EXPIRED';
-            }
-
-            totalSailTraded += lockedSail;
-            if (discountPct > bestDiscountPct) bestDiscountPct = discountPct;
-
-            recentSales.push({
-                date: trade.block_time,
-                priceSui,
-                lockedSail,
-                pricePerSail,
-                discountPct,
-                lockType,
-            });
+        if (nftIds.length > 0) {
+            const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
+                `{ sui { nfts(where: { id: { _in: ${JSON.stringify(nftIds)} } }) { id token_id } } }`
+            );
+            nftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
         }
+
+        // Fetch on-chain data for listings
+        const tokenIds = [...new Set([...nftMap.values()])];
+        const onChainMap = await fetchObjects(tokenIds);
 
         // Process listings
         const listings: VeSailListing[] = [];
@@ -223,6 +227,9 @@ export async function GET() {
         // Sort listings by best deal (highest discount / lowest premium)
         listings.sort((a, b) => b.discountPct - a.discountPct);
 
+        // Find best listing (highest discount = best deal)
+        const bestListing = listings.length > 0 ? listings[0] : null;
+
         // Calculate average discount from valid sales
         const avgDiscountPct = recentSales.length > 0
             ? recentSales.reduce((sum, s) => sum + s.discountPct, 0) / recentSales.length
@@ -234,24 +241,32 @@ export async function GET() {
             ? recentSales.reduce((sum, s) => sum + s.discountPct * s.lockedSail, 0) / totalSailWeight
             : 0;
 
+        // Best discount from historical trades
+        const bestHistoricalDiscount = recentSales.length > 0
+            ? Math.max(...recentSales.map(s => s.discountPct))
+            : 0;
+
         // veSAIL price in SAIL terms: if discount is 20%, veSAIL = 0.8 SAIL
-        // Discount > 0 means cheaper than SAIL, so veSAIL < 1 SAIL
-        // Discount < 0 (premium) means more expensive, so veSAIL > 1 SAIL
         const veSailPriceInSail = 1 - (weightedAvgDiscountPct / 100);
 
         const response: VeSailMarketData = {
             stats: {
-                totalSales: trades.length,
+                totalSales: recentSales.length,
                 totalVolumeSui,
                 avgDiscountPct,
                 weightedAvgDiscountPct,
                 veSailPriceInSail,
-                bestDiscountPct: bestDiscountPct === -Infinity ? 0 : bestDiscountPct,
+                bestDiscountPct: bestHistoricalDiscount,
                 sailSpotPriceSui: sailSpotPrice,
+                // Best current listing
+                bestListingPricePerSail: bestListing?.pricePerSail ?? null,
+                bestListingDiscountPct: bestListing?.discountPct ?? null,
+                bestListingPriceSui: bestListing?.priceSui ?? null,
             },
             recentSales: recentSales.slice(0, 20),
             listings,
             lastUpdated: new Date().toISOString(),
+            dataSource,
         };
 
         return NextResponse.json(response, {
