@@ -340,7 +340,7 @@ export default function VeSailMarketPanel() {
                             </span>
                         </div>
                         <div style={{ fontSize: '0.8rem' }}>
-                            {recentSales.slice(0, 5).map((sale, i) => (
+                            {recentSales.slice(0, 8).map((sale, i) => (
                                 <div
                                     key={i}
                                     style={{
@@ -348,7 +348,8 @@ export default function VeSailMarketPanel() {
                                         justifyContent: 'space-between',
                                         alignItems: 'center',
                                         padding: 'var(--space-xs) 0',
-                                        borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none'
+                                        borderBottom: i < 7 ? '1px solid var(--border-subtle)' : 'none',
+                                        opacity: sale.lockType === 'UNAVAILABLE' ? 0.5 : 1
                                     }}
                                 >
                                     <span style={{ color: 'var(--text-muted)', minWidth: '55px' }}>
@@ -358,27 +359,36 @@ export default function VeSailMarketPanel() {
                                         {sale.priceSui.toFixed(1)} SUI
                                     </span>
                                     <span style={{ fontFamily: 'var(--font-mono)', minWidth: '45px', textAlign: 'right' }}>
-                                        {sale.lockedSail >= 1000 ? `${(sale.lockedSail / 1000).toFixed(1)}K` : sale.lockedSail.toFixed(0)}
+                                        {sale.lockType === 'UNAVAILABLE'
+                                            ? '—'
+                                            : (sale.lockedSail >= 1000 ? `${(sale.lockedSail / 1000).toFixed(1)}K` : sale.lockedSail.toFixed(0))}
                                     </span>
                                     <span style={{
                                         fontFamily: 'var(--font-mono)',
-                                        color: sale.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)',
+                                        color: sale.lockType === 'UNAVAILABLE'
+                                            ? 'var(--text-muted)'
+                                            : (sale.discountPct > 0 ? 'var(--color-success)' : 'var(--color-warning)'),
                                         minWidth: '40px',
                                         textAlign: 'right'
                                     }}>
-                                        {sale.discountPct > 0 ? '-' : '+'}
-                                        {Math.abs(sale.discountPct).toFixed(0)}%
+                                        {sale.lockType === 'UNAVAILABLE'
+                                            ? '—'
+                                            : `${sale.discountPct > 0 ? '-' : '+'}${Math.abs(sale.discountPct).toFixed(0)}%`}
                                     </span>
                                     <span style={{
-                                        background: sale.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)',
-                                        color: sale.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)',
+                                        background: sale.lockType === 'UNAVAILABLE'
+                                            ? 'var(--color-error-muted, rgba(255,50,50,0.15))'
+                                            : (sale.lockType === 'PERM' ? 'var(--color-primary-muted)' : 'var(--surface-elevated)'),
+                                        color: sale.lockType === 'UNAVAILABLE'
+                                            ? 'var(--color-error, #ff6b6b)'
+                                            : (sale.lockType === 'PERM' ? 'var(--color-primary)' : 'var(--text-secondary)'),
                                         padding: '2px 6px',
                                         borderRadius: '4px',
                                         fontSize: '0.65rem',
                                         minWidth: '45px',
                                         textAlign: 'center'
                                     }}>
-                                        {sale.lockType}
+                                        {sale.lockType === 'UNAVAILABLE' ? 'N/A' : sale.lockType}
                                     </span>
                                 </div>
                             ))}

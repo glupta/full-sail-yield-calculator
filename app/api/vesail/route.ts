@@ -121,12 +121,21 @@ export interface VeSailMarketData {
 /**
  * Convert persisted trade row to VeSailSale format
  */
-function tradeRowToSale(row: VeSailTradeRow, sailSpotPrice: number): VeSailSale | null {
+function tradeRowToSale(row: VeSailTradeRow, sailSpotPrice: number): VeSailSale {
     const priceSui = row.price_mist / MIST_PER_SUI;
     const lockedSail = row.locked_sail;
 
-    // Skip trades with 0 SAIL (shouldn't happen with DB, but safety check)
-    if (lockedSail <= 0) return null;
+    // Handle UNAVAILABLE trades (data was not captured in time)
+    if (lockedSail <= 0) {
+        return {
+            date: row.block_time,
+            priceSui,
+            lockedSail: 0,
+            pricePerSail: 0,
+            discountPct: 0,
+            lockType: 'UNAVAILABLE',
+        };
+    }
 
     const pricePerSail = priceSui / lockedSail;
     const discountPct = ((sailSpotPrice - pricePerSail) / sailSpotPrice) * 100;
@@ -158,8 +167,9 @@ export async function GET() {
 
                 for (const row of dbTrades) {
                     const sale = tradeRowToSale(row, sailSpotPrice);
-                    if (sale) {
-                        recentSales.push(sale);
+                    recentSales.push(sale);
+                    // Only count volume for available trades
+                    if (sale.lockType !== 'UNAVAILABLE') {
                         totalVolumeSui += sale.priceSui;
                     }
                 }
@@ -230,20 +240,23 @@ export async function GET() {
         // Find best listing (highest discount = best deal)
         const bestListing = listings.length > 0 ? listings[0] : null;
 
+        // Only include available trades in stats calculations
+        const availableSales = recentSales.filter(s => s.lockType !== 'UNAVAILABLE');
+
         // Calculate average discount from valid sales
-        const avgDiscountPct = recentSales.length > 0
-            ? recentSales.reduce((sum, s) => sum + s.discountPct, 0) / recentSales.length
+        const avgDiscountPct = availableSales.length > 0
+            ? availableSales.reduce((sum, s) => sum + s.discountPct, 0) / availableSales.length
             : 0;
 
         // Calculate weighted average discount (weighted by SAIL amount)
-        const totalSailWeight = recentSales.reduce((sum, s) => sum + s.lockedSail, 0);
+        const totalSailWeight = availableSales.reduce((sum, s) => sum + s.lockedSail, 0);
         const weightedAvgDiscountPct = totalSailWeight > 0
-            ? recentSales.reduce((sum, s) => sum + s.discountPct * s.lockedSail, 0) / totalSailWeight
+            ? availableSales.reduce((sum, s) => sum + s.discountPct * s.lockedSail, 0) / totalSailWeight
             : 0;
 
         // Best discount from historical trades
-        const bestHistoricalDiscount = recentSales.length > 0
-            ? Math.max(...recentSales.map(s => s.discountPct))
+        const bestHistoricalDiscount = availableSales.length > 0
+            ? Math.max(...availableSales.map(s => s.discountPct))
             : 0;
 
         // veSAIL price in SAIL terms: if discount is 20%, veSAIL = 0.8 SAIL
