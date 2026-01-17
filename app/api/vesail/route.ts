@@ -14,16 +14,14 @@ const VESAIL_COLLECTION_SLUG = '0xe616397e503278d406e184d2258bcbe7a263d0192cc084
 const SAIL_DECIMALS = 6; // SAIL uses 6 decimals, not 9
 const MIST_PER_SUI = 1_000_000_000;
 
-// Fetch SAIL spot price from Full Sail pool
+// Fetch SAIL spot price in SUI terms
 async function fetchSailSpotPrice(): Promise<number> {
     try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/sail-price`);
-        if (response.ok) {
-            const data = await response.json();
-            // Convert USD price to SUI price (approximate)
-            const suiPriceUsd = 1.82; // TODO: fetch dynamically
-            return data.price / suiPriceUsd;
-        }
+        // Use the existing SDK wrapper to avoid port issues with internal fetch
+        const { fetchSailPrice } = await import('@/lib/sdk-server');
+        const sailPriceUsd = await fetchSailPrice();
+        const suiPriceUsd = 1.82; // Approximate SUI price
+        return sailPriceUsd / suiPriceUsd;
     } catch (e) {
         console.warn('Failed to fetch SAIL price:', e);
     }
