@@ -127,68 +127,73 @@ export async function GET() {
         const existingIds = await getExistingTradeIds(tradeIds);
         const newTrades = trades.filter(t => !existingIds.has(t.id));
 
-        if (newTrades.length === 0) {
-            return NextResponse.json({ indexed: 0, total: trades.length, message: 'All trades already indexed' });
-        }
+        // Note: Don't return early here - we still need to index listings even if all trades are indexed
 
-        // Step 3: Get NFT token IDs for new trades
-        const nftIds = [...new Set(newTrades.map(t => t.nft_id))];
-        const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
-            `{ sui { nfts(where: { id: { _in: ${JSON.stringify(nftIds)} } }) { id token_id } } }`
-        );
-        const nftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
+        // Step 3-6: Process new trades if any exist
+        let tradesCount = 0;
+        let tradesError: string | null = null;
 
-        // Step 4: Fetch on-chain data for all token IDs
-        const tokenIds = [...new Set(nftsResult.nfts.map(n => n.token_id))];
-        const onChainMap = await fetchObjects(tokenIds);
+        if (newTrades.length > 0) {
+            // Step 3: Get NFT token IDs for new trades
+            const nftIds = [...new Set(newTrades.map(t => t.nft_id))];
+            const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
+                `{ sui { nfts(where: { id: { _in: ${JSON.stringify(nftIds)} } }) { id token_id } } }`
+            );
+            const nftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
 
-        // Step 5: Build trade records with snapshotted data
-        const tradeRecords: Omit<VeSailTradeRow, 'created_at'>[] = [];
+            // Step 4: Fetch on-chain data for all token IDs
+            const tokenIds = [...new Set(nftsResult.nfts.map(n => n.token_id))];
+            const onChainMap = await fetchObjects(tokenIds);
 
-        for (const trade of newTrades) {
-            const tokenId = nftMap.get(trade.nft_id);
-            if (!tokenId) continue;
+            // Step 5: Build trade records with snapshotted data
+            const tradeRecords: Omit<VeSailTradeRow, 'created_at'>[] = [];
 
-            const fields = onChainMap.get(tokenId);
+            for (const trade of newTrades) {
+                const tokenId = nftMap.get(trade.nft_id);
+                if (!tokenId) continue;
 
-            // Store trade even if on-chain data unavailable (NFT burned/merged)
-            if (!fields) {
+                const fields = onChainMap.get(tokenId);
+
+                // Store trade even if on-chain data unavailable (NFT burned/merged)
+                if (!fields) {
+                    tradeRecords.push({
+                        id: trade.id,
+                        tx_hash: null,
+                        block_time: trade.block_time,
+                        price_mist: trade.price,
+                        token_id: tokenId,
+                        locked_sail: -1, // Flag: data unavailable
+                        lock_type: 'UNAVAILABLE',
+                        lock_end_ts: null,
+                    });
+                    continue;
+                }
+
+                const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
+
+                // Even if lockedSail is 0, we still record the trade
+                // This captures trades where SAIL was later withdrawn
+                const { lockType, lockEndTs } = calculateLockType(fields);
+
                 tradeRecords.push({
                     id: trade.id,
                     tx_hash: null,
                     block_time: trade.block_time,
                     price_mist: trade.price,
                     token_id: tokenId,
-                    locked_sail: -1, // Flag: data unavailable
-                    lock_type: 'UNAVAILABLE',
-                    lock_end_ts: null,
+                    locked_sail: lockedSail,
+                    lock_type: lockType,
+                    lock_end_ts: lockEndTs,
                 });
-                continue;
             }
 
-            const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
-
-            // Even if lockedSail is 0, we still record the trade
-            // This captures trades where SAIL was later withdrawn
-            const { lockType, lockEndTs } = calculateLockType(fields);
-
-            tradeRecords.push({
-                id: trade.id,
-                tx_hash: null,
-                block_time: trade.block_time,
-                price_mist: trade.price,
-                token_id: tokenId,
-                locked_sail: lockedSail,
-                lock_type: lockType,
-                lock_end_ts: lockEndTs,
-            });
-        }
-
-        // Step 6: Upsert trades to database
-        const { count: tradesCount, error: tradesError } = await upsertVeSailTrades(tradeRecords);
-
-        if (tradesError) {
-            console.error('Failed to persist trades:', tradesError.message);
+            // Step 6: Upsert trades to database
+            const result = await upsertVeSailTrades(tradeRecords);
+            tradesCount = result.count;
+            if (result.error) {
+                tradesError = result.error.message;
+                console.error('Failed to persist trades:', result.error.message);
+            }
         }
 
         // Step 7: Fetch and persist LISTINGS
