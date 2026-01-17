@@ -171,9 +171,9 @@ export default function VeSailMarketPanel() {
             </div>
 
             {/* Main content grid */}
-            <div style={{
+            <div className="vesail-content-grid" style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
                 gap: 'var(--space-lg)',
             }}>
                 {/* Current Listings */}

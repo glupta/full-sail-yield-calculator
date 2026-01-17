@@ -584,6 +584,22 @@ input[type="range"]::-moz-range-thumb {
   .stat-label {
     font-size: 0.6rem;
   }
+
+  /* veSAIL Market Panel - Stack 2-col grid on mobile */
+  .vesail-market>div:nth-child(2) {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Holders table - horizontal scroll on mobile */
+  .holders-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Full-span for holders card on mobile */
+  .glass-card[style*="grid-column: span 2"] {
+    grid-column: span 1 !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -611,6 +627,120 @@ input[type="range"]::-moz-range-thumb {
 
   .btn-group-mobile .btn {
     width: 100%;
+  }
+
+  /* Tabs - Icons only on very small screens */
+  .tab-group {
+    max-width: 100% !important;
+  }
+
+  .tab {
+    padding: var(--space-sm);
+    font-size: 0.75rem;
+  }
+
+  .tab svg {
+    margin-right: 4px !important;
+  }
+
+  /* Price stepper buttons - larger touch target */
+  .price-stepper-mini {
+    width: 36px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  /* Listings/Sales tables - tighter spacing */
+  .vesail-market [style*="justify-content: space-between"] span {
+    min-width: auto !important;
+    font-size: 0.7rem;
+  }
+
+  /* Hero stats - smaller on mobile */
+  .hero-stat-value,
+  [style*="fontSize: '1.5rem'"],
+  [style*="fontSize: '1.75rem'"] {
+    font-size: 1.25rem !important;
+  }
+
+  /* Scenario header */
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Yield breakdown table - tighter columns */
+  [style*="gridTemplateColumns: '1fr auto auto'"] {
+    gap: var(--space-sm);
+  }
+
+  /* Pool metrics grid - force 2 columns */
+  .pool-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Better slider styling on mobile */
+  input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Claim strategy section - more padding */
+  .claim-strategy-section {
+    padding: var(--space-md);
+  }
+
+  /* Footer text smaller */
+  footer {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* Holders card - horizontal scroll table on mobile */
+@media (max-width: 640px) {
+  .holders-card>div:last-child {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 calc(-1 * var(--space-md));
+    padding: 0 var(--space-md);
+  }
+
+  .holders-card>div:last-child>div {
+    min-width: 320px;
+  }
+
+  /* veSAIL listings/sales scrollable on mobile */
+  .vesail-content-grid .glass-card>div:last-child {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Very small screens (360px) */
+@media (max-width: 360px) {
+  h1 {
+    font-size: 1.25rem !important;
+  }
+
+  h2 {
+    font-size: 1.1rem !important;
+  }
+
+  .tab {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.7rem;
+  }
+
+  .summary-card {
+    padding: var(--space-sm);
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+  }
+
+  .stat-label {
+    font-size: 0.55rem;
+    letter-spacing: 0.8px;
   }
 }
 
@@ -1149,13 +1279,11 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 640px) {
   .price-range-inline {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
 
-.price-range-preset {
-  /* inherits 1fr from grid */
-}
+/* .price-range-preset inherits 1fr from grid parent */
 
 .price-range-preset select {
   width: 100%;
@@ -1335,6 +1463,7 @@ input[type="number"]::-webkit-outer-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Mobile-specific utilities */

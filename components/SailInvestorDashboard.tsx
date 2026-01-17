@@ -268,9 +268,9 @@ export default function SailInvestorDashboard() {
             </div>
 
             {/* Main Grid - 2 panels */}
-            <div style={{
+            <div className="sail-dashboard-grid" style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                 gap: 'var(--space-lg)',
             }}>
                 {/* Protocol Performance */}
@@ -346,7 +346,7 @@ export default function SailInvestorDashboard() {
                 </div>
 
                 {/* Top SAIL Holders */}
-                <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+                <div className="glass-card holders-card" style={{ gridColumn: '1 / -1' }}>
                     <h3 className="mb-md flex items-center gap-sm" style={{ fontSize: '1rem' }}>
                         <Users size={18} style={{ color: 'var(--color-primary)' }} />
                         Top SAIL Holders
