@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchPersistedTrades, isSupabaseConfigured, VeSailTradeRow } from '@/lib/supabase';
+import { fetchPersistedTrades, isSupabaseConfigured, VeSailTradeRow, fetchPersistedListings, VeSailListingRow } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
@@ -176,62 +176,31 @@ export async function GET() {
             }
         }
 
-        // Fetch LIVE listings from Tradeport (always fresh - these change frequently)
-        const listingsResult = await graphqlQuery<{ listings: Array<{ id: string; price: number | null; nft_id: string }> }>(
-            `{ sui { listings(where: { collection_id: { _eq: "${VESAIL_COLLECTION_ID}" } }, limit: 100) { id price nft_id } } }`
-        );
-
-        const activeListings = listingsResult.listings.filter(l => l.price && l.price > 0);
-
-        // Get NFT token IDs for listings
-        const nftIds = [...new Set(activeListings.map(l => l.nft_id))];
-        let nftMap = new Map<string, string>();
-
-        if (nftIds.length > 0) {
-            const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
-                `{ sui { nfts(where: { id: { _in: ${JSON.stringify(nftIds)} } }) { id token_id } } }`
-            );
-            nftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
-        }
-
-        // Fetch on-chain data for listings
-        const tokenIds = [...new Set([...nftMap.values()])];
-        const onChainMap = await fetchObjects(tokenIds);
-
-        // Process listings
+        // Fetch LISTINGS from database (persisted by indexer)
         const listings: VeSailListing[] = [];
 
-        for (const listing of activeListings) {
-            const tokenId = nftMap.get(listing.nft_id);
-            const priceSui = listing.price! / MIST_PER_SUI;
+        if (isSupabaseConfigured()) {
+            const { listings: dbListings } = await fetchPersistedListings();
 
-            if (!tokenId) continue;
-            const fields = onChainMap.get(tokenId);
-            if (!fields) continue;
+            for (const row of dbListings) {
+                const priceSui = row.price_mist / MIST_PER_SUI;
+                const lockedSail = row.locked_sail;
 
-            const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
-            if (lockedSail <= 0) continue;
+                if (lockedSail <= 0) continue;
 
-            const isPermanent = fields.permanent === true;
-            const endTimestamp = parseInt(fields.end || '0');
-            const pricePerSail = priceSui / lockedSail;
-            const discountPct = ((sailSpotPrice - pricePerSail) / sailSpotPrice) * 100;
+                const pricePerSail = priceSui / lockedSail;
+                const discountPct = ((sailSpotPrice - pricePerSail) / sailSpotPrice) * 100;
 
-            let lockType: string = 'PERM';
-            if (!isPermanent && endTimestamp > 0) {
-                const yearsRemaining = (new Date(endTimestamp * 1000).getTime() - Date.now()) / (365 * 24 * 60 * 60 * 1000);
-                lockType = yearsRemaining > 0 ? `${yearsRemaining.toFixed(1)}yr` : 'EXPIRED';
+                listings.push({
+                    tokenId: row.token_id,
+                    priceSui,
+                    lockedSail,
+                    pricePerSail,
+                    discountPct,
+                    lockType: row.lock_type,
+                    tradeportUrl: `https://www.tradeport.xyz/sui/collection/${encodeURIComponent(VESAIL_COLLECTION_SLUG)}?tokenId=${row.token_id}`,
+                });
             }
-
-            listings.push({
-                tokenId,
-                priceSui,
-                lockedSail,
-                pricePerSail,
-                discountPct,
-                lockType,
-                tradeportUrl: `https://www.tradeport.xyz/sui/collection/${encodeURIComponent(VESAIL_COLLECTION_SLUG)}?tokenId=${tokenId}`,
-            });
         }
 
         // Sort listings by best deal (highest discount / lowest premium)

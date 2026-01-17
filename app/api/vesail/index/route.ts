@@ -10,7 +10,9 @@ import {
     isSupabaseConfigured,
     upsertVeSailTrades,
     getExistingTradeIds,
-    VeSailTradeRow
+    VeSailTradeRow,
+    replaceVeSailListings,
+    VeSailListingRow
 } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -182,28 +184,96 @@ export async function GET() {
             });
         }
 
-        // Step 6: Upsert to database
-        const { count, error } = await upsertVeSailTrades(tradeRecords);
+        // Step 6: Upsert trades to database
+        const { count: tradesCount, error: tradesError } = await upsertVeSailTrades(tradeRecords);
 
-        if (error) {
-            return NextResponse.json(
-                { error: 'Failed to persist trades', details: error.message },
-                { status: 500 }
+        if (tradesError) {
+            console.error('Failed to persist trades:', tradesError.message);
+        }
+
+        // Step 7: Fetch and persist LISTINGS
+        let listingsCount = 0;
+        let listingsError: string | null = null;
+
+        try {
+            // Fetch current listings from Tradeport
+            const listingsResult = await graphqlQuery<{ listings: Array<{ id: string; price: number | null; nft_id: string }> }>(
+                `{ sui { listings(where: { collection_id: { _eq: "${VESAIL_COLLECTION_ID}" } }, limit: 100) { id price nft_id } } }`
             );
+
+            const activeListings = listingsResult.listings.filter(l => l.price && l.price > 0);
+
+            // Get NFT token IDs for listings
+            const listingNftIds = [...new Set(activeListings.map(l => l.nft_id))];
+            let listingNftMap = new Map<string, string>();
+
+            if (listingNftIds.length > 0) {
+                const nftsResult = await graphqlQuery<{ nfts: Array<{ id: string; token_id: string }> }>(
+                    `{ sui { nfts(where: { id: { _in: ${JSON.stringify(listingNftIds)} } }) { id token_id } } }`
+                );
+                listingNftMap = new Map(nftsResult.nfts.map(n => [n.id, n.token_id]));
+            }
+
+            // Fetch on-chain data for listing token IDs
+            const listingTokenIds = [...new Set([...listingNftMap.values()])];
+            const listingOnChainMap = await fetchObjects(listingTokenIds);
+
+            // Build listing records
+            const listingRecords: Omit<VeSailListingRow, 'updated_at'>[] = [];
+
+            for (const listing of activeListings) {
+                const tokenId = listingNftMap.get(listing.nft_id);
+                if (!tokenId) continue;
+
+                const fields = listingOnChainMap.get(tokenId);
+                if (!fields) continue;
+
+                const lockedSail = Number(fields.amount) / Math.pow(10, SAIL_DECIMALS);
+                if (lockedSail <= 0) continue;
+
+                const { lockType, lockEndTs } = calculateLockType(fields);
+
+                listingRecords.push({
+                    token_id: tokenId,
+                    listing_id: listing.id,
+                    price_mist: listing.price!,
+                    locked_sail: lockedSail,
+                    lock_type: lockType,
+                    lock_end_ts: lockEndTs,
+                });
+            }
+
+            // Replace listings in database (atomic refresh)
+            const listingsResult2 = await replaceVeSailListings(listingRecords);
+            listingsCount = listingsResult2.count;
+            if (listingsResult2.error) {
+                listingsError = listingsResult2.error.message;
+            }
+
+        } catch (e) {
+            listingsError = String(e);
+            console.error('Error indexing listings:', e);
         }
 
         return NextResponse.json({
-            indexed: count,
-            total: trades.length,
-            skipped: newTrades.length - count,
-            message: `Indexed ${count} new trades`,
+            trades: {
+                indexed: tradesCount,
+                total: trades.length,
+                skipped: newTrades.length - tradesCount,
+            },
+            listings: {
+                indexed: listingsCount,
+                error: listingsError,
+            },
+            message: `Indexed ${tradesCount} trades and ${listingsCount} listings`,
         });
 
     } catch (error) {
-        console.error('Error indexing veSAIL trades:', error);
+        console.error('Error indexing veSAIL data:', error);
         return NextResponse.json(
             { error: 'Indexing failed', details: String(error) },
             { status: 500 }
         );
     }
 }
+
