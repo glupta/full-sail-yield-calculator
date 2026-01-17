@@ -332,9 +332,7 @@ export default function SailInvestorDashboard() {
                         tooltip="Ratio of weekly fees distributed to weekly emission value"
                     />
                 </div>
-
             </div>
         </div>
-        </div >
     );
 }
