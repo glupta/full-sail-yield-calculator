@@ -4,15 +4,38 @@
  * VeSailMarketPanel - veSAIL secondary market analytics
  * Inspired by Vexy.fi design patterns
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrendingDown, TrendingUp, Activity, ShoppingCart, ExternalLink, RefreshCw, HelpCircle, Clock } from 'lucide-react';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts';
+
+const STALE_THRESHOLD_MINUTES = 5; // Consider data stale after 5 minutes
 
 export default function VeSailMarketPanel() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [sailPriceUsd, setSailPriceUsd] = useState(null);
+    const [lastRefresh, setLastRefresh] = useState(null);
+
+    // Trigger background indexer to refresh data
+    const triggerRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await fetch('/api/vesail/index');
+            // Refetch data after indexer completes
+            const vesailRes = await fetch('/api/vesail');
+            if (vesailRes.ok) {
+                const result = await vesailRes.json();
+                setData(result);
+                setLastRefresh(new Date());
+            }
+        } catch (e) {
+            console.warn('Background refresh failed:', e);
+        } finally {
+            setRefreshing(false);
+        }
+    }, []);
 
     const fetchData = async () => {
         setLoading(true);
@@ -25,9 +48,19 @@ export default function VeSailMarketPanel() {
             if (!vesailRes.ok) throw new Error('Failed to fetch');
             const result = await vesailRes.json();
             setData(result);
+            setLastRefresh(new Date(result.lastUpdated));
             if (priceRes.ok) {
                 const priceData = await priceRes.json();
                 setSailPriceUsd(priceData.price);
+            }
+
+            // Check if data is stale and trigger background refresh
+            if (result.lastUpdated) {
+                const dataAge = (Date.now() - new Date(result.lastUpdated).getTime()) / (1000 * 60);
+                if (dataAge > STALE_THRESHOLD_MINUTES) {
+                    console.log(`Data is ${dataAge.toFixed(1)} min old, triggering background refresh...`);
+                    triggerRefresh(); // Don't await - let it run in background
+                }
             }
         } catch (e) {
             setError(e.message);
@@ -107,13 +140,19 @@ export default function VeSailMarketPanel() {
                             }}></span>
                             LIVE
                         </span>
+                        {refreshing && (
+                            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
+                                Syncing...
+                            </span>
+                        )}
                         <button
-                            onClick={fetchData}
+                            onClick={triggerRefresh}
+                            disabled={refreshing}
                             className="btn btn-ghost"
                             style={{ padding: 'var(--space-xs)' }}
-                            title="Refresh data"
+                            title="Refresh data from Tradeport"
                         >
-                            <RefreshCw size={16} />
+                            <RefreshCw size={16} className={refreshing ? 'spin' : ''} />
                         </button>
                     </div>
                 </div>
